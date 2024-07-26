@@ -61,7 +61,7 @@ class filters(object):
     def __init__(self, Ts = 0.01):
         self.Ts = Ts
 
-    def moving_average(self, input_signal, window_size):
+    def moving_average(input_signal, window_size):
         '''
         Moving average filter.
 
@@ -84,13 +84,10 @@ class filters(object):
                 filtered_signal_1.append(np.mean(input_signal_1[i-window_size:i+1]))
                 filtered_signal_2.append(np.mean(input_signal_2[i-window_size:i+1]))
         
-        filtered_signal_1 = np.array(filtered_signal_1)
-        filtered_signal_2 = np.array(filtered_signal_2)
+        filtered_signal = np.vstack((filtered_signal_1, filtered_signal_2)).T
         
-        return filtered_signal_1, filtered_signal_2
+        return filtered_signal
         
-
-    
 
 class DD_robot(object):
     '''
