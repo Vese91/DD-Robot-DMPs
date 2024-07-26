@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 from dd_robot import PID, DD_robot
 from dmp import dmp_cartesian as dmp
+import copy
 
 # PID controller
 K = 12  # proportional gain, for robot angular velocity
@@ -22,20 +23,22 @@ controller = PID()  # default PID controller (in this script we are not using it
 robot = DD_robot(X=X0, dt=Ts, m=mass, I=Inertia, controller=controller) # robot initialization
 
 # Waypoints
-tol = 0.05  # reaching tolerance 
+tol = 0.02  # reaching tolerance 
 waypoints = np.array([[-6, 3], [2, 3], [2, -1], [3, -4]])  # waypoints to follow ([[-6, 3], [2, 3], [2, -2], [0, 0]])
 tVec, train_path, train_vel, train_acc = robot.generate_train_path(v_target, K, waypoints, tol, sigma = diff_coeff)  # train path
 
 # Learning
-MP_new = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = 100, K = 1000, dt = Ts, alpha_s = 4.0, tol = 6.0 / 100, rescale=None)
-MP_new.imitate_path(x_des = train_path, t_des = tVec)
+MP_new = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = 100, K = 5000, dt = Ts, alpha_s = 2.0, tol = 3.0 / 100, rescale=None, basis="gaussian")
+MP_new.imitate_path(x_des = copy.deepcopy(train_path), dx_des = copy.deepcopy(train_vel), ddx_des = copy.deepcopy(train_acc), t_des = copy.deepcopy(tVec))
+# MP_new.imitate_path(x_des = copy.deepcopy(train_path), t_des = copy.deepcopy(tVec))
 
 # Execution
 MP_new.x_goal = train_path[-1]
 MP_new.x_0 = train_path[0]
 MP_new.reset_state()  # to reset the internal state of the DMP
-learnt_traj = MP_new.rollout()[0]
-learnt_vel = MP_new.rollout()[1]
+learnt_traj_full = MP_new.rollout(tau=tVec[-1])
+learnt_traj = learnt_traj_full[0]
+learnt_vel = learnt_traj_full[1]
 
 plt.figure()
 plt.plot(train_path[:,0], train_path[:,1],'b-')  # train path
@@ -60,14 +63,28 @@ plt.ylabel('dy[m/s]')
 
 plt.figure()
 plt.subplot(2,1,1)
-plt.plot(tVec,train_acc[:,0],'b-')
+plt.plot(train_acc[:,0],'b-')
 plt.xlabel('Time [s]')
 plt.ylabel('ddx[m/s^2]')
+plt.plot(learnt_traj_full[2][:,0],'r--')
 
 plt.subplot(2,1,2)
-plt.plot(tVec,train_acc[:,1],'b-')
+plt.plot(train_acc[:,1],'b-')
 plt.xlabel('Time [s]')
 plt.ylabel('ddy[m/s^2]')
+plt.plot(learnt_traj_full[2][:,1],'r--')
 plt.show()
+
+# plt.figure()
+# plt.subplot(2,1,1)
+# plt.plot(tVec,train_acc[:,0],'b-')
+# plt.xlabel('Time [s]')
+# plt.ylabel('ddx[m/s^2]')
+
+# plt.subplot(2,1,2)
+# plt.plot(tVec,train_acc[:,1],'b-')
+# plt.xlabel('Time [s]')
+# plt.ylabel('ddy[m/s^2]')
+# plt.show()
 
 print(">> End of script")
