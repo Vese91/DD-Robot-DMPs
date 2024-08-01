@@ -280,5 +280,101 @@ class DD_robot(object):
 
         return tVec, train_path, train_vel, train_acc
 
+    def generate_train_profiles(self, ref_speed = 2.00, K = 2.00, waypoints = None, tol = 0.05, sigma = None):
+        '''
+        Generate training path, training velocity and training acceleration for the differential drive robot. 
+
+        Inputs:
+        - ref_speed: reference speed
+        - K: proportional gain
+        - waypoints: waypoints
+        - tol: reaching tolerance
+        - sigma: Gaussian process variance
+
+        Outputs:
+        - train_path: training path
+        - train_vel: training velocity
+        - train_acc: training acceleration
+        '''
+        # Parameters
+        counter = 0  # waypoints counter 
+        i = 0  # time counter
+        i_dec = 0  # deceleration time counter
+        alpha = 21  # deceleration factor
+        rg = 3*tol  # deceleration region radius
+
+        # Loop initialization
+        B = np.zeros((4,1))  # Brownian motion initial condition
+        #max_iter = 1320  # maximum number of iterations
+        robot_position = np.array([self.X[0], self.X[1]])  # robot current position
+        goal_dist = np.linalg.norm(waypoints[-1,:]-robot_position.transpose())  # distance to goal
+        tVec = []  # time vector
+        train_path = []  # path array
+        train_vel = []  # velocity array
+        tVec.append(i*self.dt)  # store time
+        train_path.append(np.array([[self.X[0]], [self.X[1]]]).transpose())  # store state
+        train_vel.append(np.zeros((1,2)))  # store velocity
+        X0 = np.array([self.X[0], self.X[1], self.X[2]])  # initial robot pose
+        while goal_dist > tol: # and i < max_iter:
+            wp_dist = np.linalg.norm(waypoints[counter,:] - robot_position.transpose())  # distance to waypoint
+            if wp_dist < tol:
+                counter = counter + 1
+            
+            if counter >= waypoints.shape[0]:  # check if all waypoints have been reached
+                break
+
+            # Robot Proportional control
+            theta_d = np.arctan2(waypoints[counter,1] - robot_position[1], waypoints[counter,0] - robot_position[0])  # desired heading 
+            error = theta_d - self.X[2]  # heading error
+            w = K*error
+           
+            # If we are approaching the goal and we are sufficiently near, then the robot must slow down
+            if counter == waypoints.shape[0]-1 and goal_dist <= rg: 
+                v_in = ref_speed * np.exp(-alpha*i_dec*self.dt)  # deceleration
+                w_in = w  # keep the same angular velocity
+                sigma_in = np.zeros(4)  # no noise
+                i_dec = i_dec + 1  # deceleration time counter
+            else:
+                # keep the robot at a constant reference speed
+                v_in = ref_speed
+                w_in = w
+                sigma_in = sigma
+           
+            # Kinematics
+            v_in, theta_d, w_in = np.squeeze(v_in), np.squeeze(theta_d), np.squeeze(w_in)  # to eleminate singleton dimensions
+            B = B + np.sqrt(self.dt)*np.random.randn(4,1)  # Brownian motion increment
+            self.X = self.kinematic_model(v_in, w_in, sigma_in, B)  # system state update
+
+            # Robot velocity in world frame
+            dot_x = (self.X[0]-X0[0])/self.dt
+            dot_y = (self.X[1]-X0[1])/self.dt
+            dot_theta = (self.X[2]-X0[2])/self.dt
+
+            # Robot velocity in robot frame
+            v_ref, _ = self.inverse_kinematics(dot_x, dot_y)  # robot linear velocity
+            w_ref = dot_theta  # robot angular velocity
+            vel_ref = np.array([v_ref, w_ref])  # robot velocity array
+
+            # Updates
+            i = i + 1  # time counter
+            robot_position = np.array([self.X[0], self.X[1]])  # update robot position
+            X0 = np.array([self.X[0], self.X[1], self.X[2]]) # update robot pose
+            goal_dist = np.linalg.norm(waypoints[-1,:] - robot_position.transpose())  # update distance to goal
+            tVec.append(i*self.dt)  # append time
+            train_path.append(np.reshape(robot_position,(1,2)))  # append training path
+            train_vel.append(np.reshape(vel_ref,(1,2)))  # append training velocity
+
+        # Time vector
+        tVec = np.array(tVec)
+
+        # Reference trajectory
+        train_path = np.array(train_path)
+        train_path = np.squeeze(train_path)
+
+        # Reference velocity
+        train_vel = np.array(train_vel) 
+        train_vel = np.squeeze(train_vel)
+
+        return tVec, train_path, train_vel
     
     
