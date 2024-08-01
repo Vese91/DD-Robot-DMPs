@@ -1,6 +1,7 @@
 ## Differentia-Drive Robot python class
 
 import numpy as np 
+from scipy.special import comb
 import scipy.linalg
 import matplotlib.pyplot as plt
 from dmp import derivative_matrices as dm
@@ -139,7 +140,6 @@ class DD_robot(object):
 
         return self.X
         
-
     def dynamic_model(self, tau_1, tau_2, sigma, B:np.array):
         '''
         Differential drive robot dynamics model.
@@ -193,7 +193,7 @@ class DD_robot(object):
         w = self.X[4]
 
         return v, w
-    
+
     def generate_train_path(self, ref_speed = 2.00, K = 2.00, waypoints = None, tol = 0.05, sigma = None):
         '''
         Generate training path, training velocity and training acceleration for the differential drive robot. 
@@ -238,7 +238,7 @@ class DD_robot(object):
             theta_d = np.arctan2(waypoints[counter,1] - robot_position[1], waypoints[counter,0] - robot_position[0])  # desired heading 
             error = theta_d - self.X[2]  # heading error
             w = K*error
-            
+           
             # If we are approaching the goal and we are sufficiently near, then the robot must slow down
             if counter == waypoints.shape[0]-1 and goal_dist <= rg: 
                 v_in = ref_speed * np.exp(-alpha*i_dec*self.dt)  # deceleration
@@ -250,7 +250,7 @@ class DD_robot(object):
                 v_in = ref_speed
                 w_in = w
                 sigma_in = sigma
-            
+           
             # Kinematics
             v_in, theta_d, w_in = np.squeeze(v_in), np.squeeze(theta_d), np.squeeze(w_in)  # to eleminate singleton dimensions
             B = B + np.sqrt(self.dt)*np.random.randn(4,1)  # Brownian motion increment
@@ -280,7 +280,5 @@ class DD_robot(object):
 
         return tVec, train_path, train_vel, train_acc
 
-
-    #def simulate(self, error, u0, e1, e2):
-    #    self.controller.compute(error, u0, e1, e2, self.m, self.I)
+    
     
