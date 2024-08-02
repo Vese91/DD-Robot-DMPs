@@ -15,7 +15,7 @@ m = 25  # number of points between control points
 path,_ = bz.evaluate_bezier(control_points, m)  # evaluate Interpolating Bezier curves
 
 # ROBOT INITIALIZATION
-K = 10  # proportional gain, for robot angular velocity
+K = 15  # proportional gain, for robot angular velocity
 v_target = 2.00  # target linear velocity
 mass = 20  # total mass
 l = 0.760  # robot length
@@ -23,7 +23,7 @@ b = 0.330  # robot semi-axle
 Inertia = mass*(4*pow(b,2)+pow(l,2))/12  # total moment of inertia
 X0 = np.array([path[0,0], path[0,1], np.arctan2(path[1,1] - path[0,1],path[1,0]-path[0,0]), 0, 0])  # initial state 
 Ts = 0.01 # sampling time
-diff_coeff = 0*np.array([0.0015, 0.0015, 0.0015, 0.0015])  # Gaussian process variance
+diff_coeff = np.array([0.0015, 0.0015, 0.0015, 0.0015])  # Gaussian process variance
 controller = PID()  # default PID controller (in this script we are not using it)
 robot = DD_robot(X=X0, dt=Ts, m=mass, I=Inertia, controller=controller) # robot initialization
 

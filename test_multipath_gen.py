@@ -26,31 +26,14 @@ N = 10  # number of paths
 multi_tVec = []
 multi_path = []
 multi_vel = []
-multi_acc = []
 tol = 0.05  # reaching tolerance 
 waypoints = np.array([[-6, 3], [2, 3], [2, -1], [3, -4]])  
 for j in range(N):
     robot.X = X0  # reset initial state
-    tVec, train_path, train_vel, train_acc = robot.generate_train_path(v_target, K, waypoints, tol, sigma = diff_coeff)  # train path
+    tVec, train_path, train_vel = robot.generate_train_profiles(v_target, K, waypoints, tol, sigma = diff_coeff)  # train path
     multi_tVec.append(tVec)
     multi_path.append(train_path)
     multi_vel.append(train_vel)
-    multi_acc.append(train_acc)
 
-#filt_acc_1, filt_acc_2 = filter.moving_average(multi_acc[0], window_size = 10)
-
-# Plotting
-plt.figure()
-for j in range(N):
-    plt.plot(multi_path[j][:,0], multi_path[j][:,1],'b--')  # train path
-plt.plot(waypoints[:,0], waypoints[:,1], 'ro')  # waypoints
-plt.plot(X0[0], X0[1], 'bo')  # initial position
-plt.legend(['multiple paths'])
-plt.axis('equal')
-
-plt.figure()
-for j in range(N):
-    plt.plot(multi_tVec[j], multi_vel[j][:,0],'b-')  # train path
-plt.show()
 
 print(">> End of script")
