@@ -11,7 +11,7 @@ import copy
 # REFERENCE PATH GENERATION
 tol = 0.05  # reaching tolerance for waypoints
 control_points = np.array([[2,1],[3,4],[5,7],[8,8],[11,7],[13,10],[7,13]])  # control points
-m = 25  # number of points between control points
+m = 10  # number of points between control points
 path,_ = bz.evaluate_bezier(control_points, m)  # evaluate Interpolating Bezier curves
 
 # ROBOT INITIALIZATION
@@ -67,19 +67,6 @@ plt.plot(control_points[0,0],control_points[0,1],'ro')
 plt.plot(control_points[-1,0],control_points[-1,1],'bo')
 plt.xlabel('x [m]')
 plt.ylabel('y [m]')
-
-plt.figure()
-plt.subplot(2,1,1)
-plt.plot(train_vel[:,0],'b-')
-plt.plot(learnt_vel[:,0],'r--')
-plt.xlabel('Time [s]')
-plt.ylabel('dx[m/s]')
-
-plt.subplot(2,1,2)
-plt.plot(train_vel[:,1],'b-')
-plt.plot(learnt_vel[:,1],'r--')
-plt.xlabel('Time [s]')
-plt.ylabel('dy[m/s]')
 plt.show()
 
 print("End of script")
