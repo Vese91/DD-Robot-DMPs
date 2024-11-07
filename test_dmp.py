@@ -5,6 +5,12 @@ from dd_robot import PID, DD_robot, filters
 from dmp import dmp
 import bezier_interp as bz
 import copy
+from cbf import CBF
+
+#dynamic parameters
+mu_s = 0.1
+m = 3.9 #turtlebot 4
+g = 9.81
 
 #generate a ref circular trajectory in polar coordinates (NX2)
 N = 100
@@ -22,8 +28,9 @@ dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01)
 dmp_traj.imitate_path(path)
 dmp_traj.x_0 = np.array([0, 0])
 dmp_traj.x_goal = np.array([2, np.pi])
-dmp_traj.reset_state()
 
+#no cbf
+dmp_traj.reset_state()
 x_list = np.array(dmp_traj.x)
 x_dot_list = np.array(dmp_traj.x)
 x_ddot_list = np.array(dmp_traj.x)
@@ -33,7 +40,49 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
+plt.subplot(2,2,1)
+plt.title('No CBF')
 plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP trajectory')
+plt.ylabel('y')
+plt.xlabel('x')
+plt.scatter(dmp_traj.x_goal[0]*np.cos(dmp_traj.x_goal[1]), dmp_traj.x_goal[0]*np.sin(dmp_traj.x_goal[1]), label='Goal', color='red')
+plt.scatter(dmp_traj.x_0[0]*np.cos(dmp_traj.x_0[1]), dmp_traj.x_0[0]*np.sin(dmp_traj.x_0[1]), label='Start', color='green')
+plt.legend()
+plt.subplot(2,2,3)
+plt.plot(x_dot_list[:,0] * np.abs(x_dot_list[:,1]), label='v_x * |omega|')
+plt.ylabel('v_x * |omega|')
+plt.xlabel('time')
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g')
+plt.legend()
+
+#with cbf
+dmp_traj.reset_state()
+x_list = np.array(dmp_traj.x)
+x_dot_list = np.array(dmp_traj.x)
+x_ddot_list = np.array(dmp_traj.x)
+violated_constraint = []
+cbf = CBF()
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
+    x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, m, mu_s))
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+plt.subplot(2,2,2)
+plt.title('With CBF')
+plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP trajectory')
+plt.scatter(dmp_traj.x_goal[0]*np.cos(dmp_traj.x_goal[1]), dmp_traj.x_goal[0]*np.sin(dmp_traj.x_goal[1]), label='Goal', color='red')
+plt.scatter(dmp_traj.x_0[0]*np.cos(dmp_traj.x_0[1]), dmp_traj.x_0[0]*np.sin(dmp_traj.x_0[1]), label='Start', color='green')
+plt.ylabel('y')
+plt.xlabel('x')
+plt.legend()
+plt.subplot(2,2,4)
+plt.plot(x_dot_list[:,0] * np.abs(x_dot_list[:,1]), label='v_x * |omega|')
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g')
+plt.ylabel('v_x * |omega|')
+plt.xlabel('time')
+plt.legend()
+
 plt.show()
 
 
