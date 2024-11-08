@@ -11,6 +11,7 @@ from cbf import CBF
 mu_s = 0.1
 m = 3.9 #turtlebot 4
 g = 9.81
+alpha = 10
 
 #generate a ref circular trajectory in polar coordinates (NX2)
 N = 100
@@ -27,7 +28,7 @@ dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01)
 # dmp_traj.w = np.zeros((2, n_bfs+1))
 dmp_traj.imitate_path(path)
 dmp_traj.x_0 = np.array([0, 0])
-dmp_traj.x_goal = np.array([2, np.pi])
+dmp_traj.x_goal = np.array([1, np.pi])
 
 #no cbf
 dmp_traj.reset_state()
@@ -63,7 +64,7 @@ x_ddot_list = np.array(dmp_traj.x)
 violated_constraint = []
 cbf = CBF()
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
-    x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, m, mu_s))
+    x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s))
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))

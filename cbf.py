@@ -28,7 +28,7 @@ class CBF():
         f = np.nan_to_num(M @ f)
         return f
     
-    def compute_u_safe_dmp_traj(self, dmp_traj, m, mu_s):
+    def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s):
         K_v = dmp_traj.K
         K_w = dmp_traj.K
         D_v = dmp_traj.D
@@ -37,8 +37,8 @@ class CBF():
         omega = dmp_traj.dx[1]
         self.update_s(dmp_traj) #as in step function
 
-        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_x + K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) * self.s
-        f_4 = K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega + K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) * self.s
+        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_x - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s
+        f_4 = K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * self.s
 
         f = self.compute_forcing_term(dmp_traj)
         f_v = f[0]
@@ -47,18 +47,18 @@ class CBF():
         g = 9.81
 
         if omega > 0:
-            psi_plus = - omega * (f_3 + K_v * f_v) - v_x * (f_4 + K_w * f_omega) + m * (mu_s * g - v_x * omega)
+            psi_plus = - omega * (f_3 + K_v * f_v) - v_x * (f_4 + K_w * f_omega) + alpha * (mu_s * g - v_x * omega)
             if psi_plus >= 0:
-                return 0
+                return np.array([0, 0])
             else:
-                u_safe = 1 / (v_x**2 + omega**2) * psi_plus * np.array([v_x, omega])
+                u_safe = 1 / (v_x**2 + omega**2) * psi_plus * np.array([omega, v_x])
                 return u_safe
         elif omega == 0:
-            return 0
+            return np.array([0, 0])
         elif omega < 0:
-            psi_minus = omega * (f_3 + K_v * f_v) + v_x * (f_4 + K_w * f_omega) + m * (mu_s * g + v_x * omega)
+            psi_minus = omega * (f_3 + K_v * f_v) + v_x * (f_4 + K_w * f_omega) + alpha * (mu_s * g + v_x * omega)
             if psi_minus >= 0:
-                return 0
+                return np.array([0, 0])
             else:
-                u_safe = -1 / (v_x**2 + omega**2) * psi_minus * np.array([v_x, omega])
+                u_safe = -1 / (v_x**2 + omega**2) * psi_minus * np.array([omega, v_x])
                 return u_safe
