@@ -38,36 +38,44 @@ class CBF():
         rho = dmp_traj.x[0]
         self.update_s(dmp_traj) #as in step function
 
-        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_x - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s
         # f_1 = v_x / self.tau
+        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_x - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s
         f_4 = K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * self.s
-
 
         f = self.compute_forcing_term(dmp_traj)
         f_v = f[0]
         f_omega = f[1]
 
-        g = 9.81
+        # u_safe parameters
+        g = 9.81  # gravity
+        k = 0.1  # this parameter is tunable, but has to bounded in (0, mu_s*g) interval
+        h1 = np.sqrt(v_x**2 * omega**2 + k)  # h(x) = mu_s g - h1(x)
+        psi = -(v_x*omega**2)/h1 * (f_3 + K_v*f_v) - (v_x**2*omega)/h1 * (f_4 + K_w*f_omega) + alpha * (mu_s*g - h1)**exp 
 
-        if (omega * v_x) > 0:
-            psi_plus = - omega * (f_3 + K_v * f_v) - v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g - v_x * omega))**exp
-            if psi_plus >= 0:
-                return np.array([0, 0])
-            else:
-                u_safe = 1 / (v_x**2 + omega**2) * psi_plus * np.array([omega, v_x])
-                return u_safe
-        elif (omega * v_x) < 0:
-            psi_minus = omega * (f_3 + K_v * f_v) + v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g + v_x * omega))**exp
-            if psi_minus >= 0:
-                return np.array([0, 0])
-            else:
-                u_safe = -1 / (v_x**2 + omega**2) * psi_minus * np.array([omega, v_x])
-                return u_safe
+        # u_safe
+        if psi >= 0:
+            u_safe = np.array([0, 0])  # this includes the case when v_x = 0 or omega = 0
+            return u_safe
         else:
-            return np.array([0, 0])
+            u_safe = h1**2/(v_x**2 * omega**4 + v_x**4 * omega**2) * psi * np.array([(v_x*omega**2)/h1, (v_x**2*omega)/h1])
+            return u_safe
 
-        # psi = - f_1 * (omega ** 2) - 2 * omega * rho * f_4 - 2 * omega * rho * K_w * f_omega + alpha * (mu_s * g - rho * (omega ** 2))
-        # if psi >= 0:
-        #     return np.array([0, 0])
-        # else:
-        #     return psi * np.array([0, 2 * rho * omega])
+
+        #if (omega * v_x) > 0:
+        #    psi_plus = - omega * (f_3 + K_v * f_v) - v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g - v_x * omega))**exp
+        #    if psi_plus >= 0:
+        #        return np.array([0, 0])
+        #    else:
+        #        u_safe = 1 / (v_x**2 + omega**2) * psi_plus * np.array([omega, v_x])
+        #        return u_safe
+        #elif (omega * v_x) < 0:
+        #    psi_minus = omega * (f_3 + K_v * f_v) + v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g + v_x * omega))**exp
+        #    if psi_minus >= 0:
+        #        return np.array([0, 0])
+        #    else:
+        #        u_safe = -1 / (v_x**2 + omega**2) * psi_minus * np.array([omega, v_x])
+        #        return u_safe
+        #else:
+        #    return np.array([0, 0])
+
+        

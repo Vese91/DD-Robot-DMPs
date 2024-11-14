@@ -11,8 +11,8 @@ from cbf import CBF
 mu_s = 0.1
 # m = 3.9 #turtlebot 4
 g = 9.81
-alpha = 1
-exp = 3
+alpha = 1  # extended class-K function parameter (straight line)
+exp = 1  
 
 #generate a ref circular trajectory in polar coordinates (NX2)
 N = 100
@@ -20,8 +20,8 @@ t = np.linspace(0, np.pi, N)
 r = np.linspace(0, 1, N)
 path = np.vstack((r, t)).T
 
-# plt.plot(path[:,0]*np.cos(path[:,1]), path[:,0]*np.sin(path[:,1]), label='Reference trajectory')
-# plt.show()
+#plt.plot(path[:,0]*np.cos(path[:,1]), path[:,0]*np.sin(path[:,1]), label='Reference trajectory')
+#plt.show()
 
 # train and execute a dmp in polar coordinates
 n_bfs = 100
@@ -64,7 +64,7 @@ x_dot_list = np.array(dmp_traj.x)
 x_ddot_list = np.array(dmp_traj.x)
 violated_constraint = []
 cbf = CBF()
-while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01: 
     x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, exp))
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
