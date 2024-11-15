@@ -28,18 +28,19 @@ class CBF():
         f = np.nan_to_num(M @ f)
         return f
     
-    def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, exp):
+    def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, exp, k):
         K_v = dmp_traj.K
         K_w = dmp_traj.K
         D_v = dmp_traj.D
         D_w = dmp_traj.D
-        v_x = dmp_traj.dx[0]
         omega = dmp_traj.dx[1]
+        v_r = dmp_traj.dx[0]
+        v_t = omega * dmp_traj.x[0] #CORRECT
         rho = dmp_traj.x[0]
         self.update_s(dmp_traj) #as in step function
 
-        # f_1 = v_x / self.tau
-        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_x - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s
+        # f_1 = v_r / self.tau = omega * rho / self.tau
+        f_3 = K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s
         f_4 = K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * self.s
 
         f = self.compute_forcing_term(dmp_traj)
@@ -48,16 +49,15 @@ class CBF():
 
         # u_safe parameters
         g = 9.81  # gravity
-        k = 0.1  # this parameter is tunable, but has to bounded in (0, mu_s*g) interval
-        h1 = np.sqrt(v_x**2 * omega**2 + k)  # h(x) = mu_s g - h1(x)
-        psi = -(v_x*omega**2)/h1 * (f_3 + K_v*f_v) - (v_x**2*omega)/h1 * (f_4 + K_w*f_omega) + alpha * (mu_s*g - h1)**exp 
+        h1 = np.sqrt(v_t**2 * omega**2 + k)  # h(x) = mu_s g - h1(x)
+        psi = -(v_t*omega**2)/h1 * (f_3 + K_v*f_v) - (v_t**2*omega)/h1 * (f_4 + K_w*f_omega) + alpha * (mu_s*g - h1)**exp 
 
         # u_safe
         if psi >= 0:
             u_safe = np.array([0, 0])  # this includes the case when v_x = 0 or omega = 0
             return u_safe
         else:
-            u_safe = h1**2/(v_x**2 * omega**4 + v_x**4 * omega**2) * psi * np.array([(v_x*omega**2)/h1, (v_x**2*omega)/h1])
+            u_safe = h1**2/(v_t**2 * omega**4 + v_t**4 * omega**2) * psi * np.array([(v_t*omega**2)/h1, (v_t**2*omega)/h1])
             return u_safe
 
 

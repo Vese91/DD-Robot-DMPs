@@ -13,6 +13,7 @@ mu_s = 0.1
 g = 9.81
 alpha = 1  # extended class-K function parameter (straight line)
 exp = 1  
+k = 0.1  # this parameter is tunable, but has to bounded in (0, mu_s*g) interval
 
 #generate a ref circular trajectory in polar coordinates (NX2)
 N = 100
@@ -51,7 +52,7 @@ plt.scatter(dmp_traj.x_goal[0]*np.cos(dmp_traj.x_goal[1]), dmp_traj.x_goal[0]*np
 plt.scatter(dmp_traj.x_0[0]*np.cos(dmp_traj.x_0[1]), dmp_traj.x_0[0]*np.sin(dmp_traj.x_0[1]), label='Start', color='green')
 plt.legend()
 plt.subplot(2,2,3)
-plt.plot(np.abs(x_dot_list[:,0] * x_dot_list[:,1]), label='|v_x * omega|')
+plt.plot(np.sqrt(k + np.power(x_dot_list[:,0] * x_dot_list[:,1], 2)), label='|v_x * omega|')
 plt.ylabel('|v_x * omega|')
 plt.xlabel('time')
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g')
@@ -65,7 +66,7 @@ x_ddot_list = np.array(dmp_traj.x)
 violated_constraint = []
 cbf = CBF()
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01: 
-    x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, exp))
+    x, x_dot, x_ddot = dmp_traj.step(external_force=cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, exp, k))
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
@@ -79,7 +80,7 @@ plt.ylabel('y')
 plt.xlabel('x')
 plt.legend()
 plt.subplot(2,2,4)
-plt.plot(np.abs(x_dot_list[:,0] * x_dot_list[:,1]), label='|v_x * omega|')
+plt.plot(np.sqrt(k + np.power(x_dot_list[:,0] * x_dot_list[:,1], 2)), label='|v_x * omega|')
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g')
 plt.ylabel('|v_x * omega|')
 plt.xlabel('time')
@@ -94,7 +95,7 @@ plt.legend()
 plt.grid()
 
 plt.subplot(2,1,2)
-plt.plot(np.abs(x_dot_list[:,0] * x_dot_list[:,1]), label='|v_x * omega|')
+plt.plot(np.sqrt(k + np.power(x_dot_list[:,0] * x_dot_list[:,1], 2)), label='|v_x * omega|')
 plt.plot(x_dot_list[:,0] * x_dot_list[:,1], label='v_x * omega')
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g')
 plt.ylabel('|v_x * omega|')
