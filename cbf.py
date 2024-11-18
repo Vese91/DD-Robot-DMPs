@@ -23,8 +23,8 @@ class CBF():
         else:
             M = np.eye(dmp_traj.n_dmps)
 
-        psi = dmp_traj.gen_psi(self.s)
-        f = dmp_traj.w @ psi[:, 0] / (np.sum(psi[:, 0])) * self.s
+        psi = dmp_traj.gen_psi(dmp_traj.cs.s)
+        f = dmp_traj.w @ psi[:, 0] / (np.sum(psi[:, 0])) * dmp_traj.cs.s
         f = np.nan_to_num(M @ f)
         return f
     
@@ -37,13 +37,13 @@ class CBF():
         v_r = dmp_traj.dx[0]
         v_t = omega * dmp_traj.x[0] #CORRECT
         rho = dmp_traj.x[0]
-        self.update_s(dmp_traj) #as in step function
+        # self.update_s(dmp_traj) #as in step function
 
         f_1 = v_r / self.tau 
         #f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
-        f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * self.s)/self.tau
+        f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * dmp_traj.cs.s)/self.tau
 
-        f = self.compute_forcing_term(dmp_traj)  # forcing terms
+        f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
         f_v = f[0]  # forcing term for v
         f_omega = f[1]  # forcing term for omega
 
@@ -52,10 +52,12 @@ class CBF():
         # u_safe
         if psi >= 0:
             u_safe = np.array([0, 0])  # this includes the case when v_x = 0 or omega = 0
-            return u_safe
+            status = True
+            return u_safe, psi
         else:
+            status = False
             u_safe = np.array([0, 1/(2*rho*omega)])*psi
-            return u_safe
+            return u_safe, psi
 
 
         #if (omega * v_x) > 0:
