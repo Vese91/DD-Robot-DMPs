@@ -25,8 +25,8 @@ plt.plot(path[:,0]*np.cos(path[:,1]), path[:,0]*np.sin(path[:,1]), label='Refere
 plt.show()
 
 # train and execute a dmp in polar coordinates
-n_bfs = 50
-dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01, basis= "mollifier")
+n_bfs = 100
+dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01)
 # dmp_traj.w = np.zeros((2, n_bfs+1))
 dmp_traj.imitate_path(path)
 dmp_traj.x_0 = np.array([0, 0])

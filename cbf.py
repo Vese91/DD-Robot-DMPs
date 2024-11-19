@@ -37,7 +37,6 @@ class CBF():
         v_r = dmp_traj.dx[0]
         v_t = omega * dmp_traj.x[0] #CORRECT
         rho = dmp_traj.x[0]
-        # self.update_s(dmp_traj) #as in step function
 
         f_1 = v_r / self.tau 
         #f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
