@@ -11,7 +11,7 @@ from cbf import CBF
 mu_s = 0.1
 # m = 3.9 #turtlebot 4
 g = 9.81 # gravity acceleration [m/s^2]
-alpha = 1 # extended class-K function parameter (straight line)
+alpha = 10 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)  
 
 #generate a ref circular trajectory in polar coordinates (NX2)

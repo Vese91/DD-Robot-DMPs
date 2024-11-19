@@ -15,6 +15,20 @@ Outputs:
 
 import numpy as np
 
+def unique_rows(array):
+    '''
+    Remove duplicate rows from a NumPy array while preserving the order.
+    
+    Inputs:
+    - array: NumPy array with possible duplicate rows
+
+    Outputs:
+    - result: NumPy array with unique rows in the original order
+    '''
+    _, idx = np.unique(array, axis=0, return_index=True)  # Create a boolean mask to preserve the first occurrence of each row
+    idx.sort()  # Sort the indices to maintain original order
+    return array[idx]
+
 def get_bezier_coeff(points):
   '''
   Cubic Bezier interpolation coefficients
@@ -28,11 +42,11 @@ def get_bezier_coeff(points):
   n = len(points)-1
 
   # Build coefficients matrix
-  C = 4*np.identity(n)
-  np.fill_diagonal(C[1:],1)
-  np.fill_diagonal(C[:,1:],1)
-  C[0,0] = 2
-  C[n-1,n-1] = 7
+  C = 4*np.identity(n)  
+  np.fill_diagonal(C[1:],1)  # fill diagonal with 1s
+  np.fill_diagonal(C[:,1:],1)  # fill diagonal with 1s
+  C[0,0] = 2  
+  C[n-1,n-1] = 7 
   C[n-1,n-2] = 2
 
   # Build points vector
@@ -43,7 +57,7 @@ def get_bezier_coeff(points):
   # Solve system, find A and B
   A = np.linalg.solve(C,P)
   B = [0]*n
-  for i in range(n - 1):
+  for i in range(n-1):
       B[i] = 2*points[i+1]-A[i+1]
 
   B[n-1] = (A[n-1]+points[n])/2
@@ -117,7 +131,42 @@ def evaluate_bezier(points, n):
     bezier_interp = np.array(bezier_interp)
     bezier_vel = np.array(bezier_vel)
 
+    # Remove duplicate rows while preserving order
+    bezier_interp = unique_rows(bezier_interp)
+    bezier_vel = unique_rows(bezier_vel)
+
     return bezier_interp, bezier_vel
+
+def convert_to_polar_coord(path, vel):
+    '''
+    Inputs:
+    path: numpy array of Cartesian coordinates
+    vel: numpy array of Cartesian velocities
+
+    Outputs:
+    polar_path: numpy array of Polar coordinates
+    polar_vel: numpy array of Polar velocities
+    '''
+    polar_path = []  # empty list to store polar coordinates
+    polar_vel = []  # empty list to store polar velocities
+    for i in range(len(path)):
+        # Calculate rho and theta
+        rho = np.sqrt(path[i,0]**2 + path[i,1]**2)  # calculate rho
+        theta = np.arctan2(path[i,1], path[i,0])  # calculate theta
+        polar_path.append([rho, theta])
+        
+        # Calculate rho_dot and theta_dot
+        rho_dot = (path[i,0]*vel[i,0] + path[i,1]*vel[i,1])/rho # calculate rho_dot
+        theta_dot = (path[i,0]*vel[i,1] - path[i,1]*vel[i,0])/rho**2  # calculate theta_dot
+        polar_vel.append([rho_dot, theta_dot])
+    
+    # Numpy arrays of polar coordinates and velocities
+    polar_path = np.array(polar_path)  # convert list to numpy array
+    polar_path[:,1] = np.unwrap(polar_path[:,1])  # unwrap theta, to avoid discontinuities
+
+    polar_vel = np.array(polar_vel)  # convert list to numpy array
+    return polar_path, polar_vel
+    
 
   
     
