@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 from dd_robot import PID, DD_robot, filters
 from dmp import dmp
+import math
 import bezier_interp as bz
 import copy
 from cbf import CBF
@@ -14,18 +15,19 @@ g = 9.81 # gravity acceleration [m/s^2]
 alpha = 10 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)  
 
-#generate a ref circular trajectory in polar coordinates (NX2)
-N = 100
-t = np.linspace(0, np.pi, N)
-r = np.linspace(0, 1, N)
-# r = np.sin(t) + 1
-path = np.vstack((r, t)).T
+#generate a ref trajectory
+N = 1000
+freq = 1/N/2
+t = np.linspace(0, N)
+x = np.cos(2*math.pi*freq*t)
+y = np.sin(2*math.pi*freq*t)
+path = np.vstack((np.sqrt(x**2 + y**2), np.arctan2(y, x))).T
 
 plt.plot(path[:,0]*np.cos(path[:,1]), path[:,0]*np.sin(path[:,1]), label='Reference trajectory')
 plt.show()
 
 # train and execute a dmp in polar coordinates
-n_bfs = 100
+n_bfs = 50
 dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01)
 # dmp_traj.w = np.zeros((2, n_bfs+1))
 dmp_traj.imitate_path(path)
@@ -43,16 +45,16 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
-plt.subplot(2,2,1)
+plt.subplot(2,1,1)
 plt.title('No CBF')
-plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP trajectory')
+plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP without CBF')
 plt.ylabel('y')
 plt.xlabel('x')
 plt.scatter(dmp_traj.x_goal[0]*np.cos(dmp_traj.x_goal[1]), dmp_traj.x_goal[0]*np.sin(dmp_traj.x_goal[1]), label='Goal', color='red')
 plt.scatter(dmp_traj.x_0[0]*np.cos(dmp_traj.x_0[1]), dmp_traj.x_0[0]*np.sin(dmp_traj.x_0[1]), label='Start', color='green')
 plt.legend()
-plt.subplot(2,2,3)
-plt.plot(x_list[:,0]*np.power(x_dot_list[:,1],2), label='rho * omega^2')
+plt.subplot(2,1,2)
+plt.plot(x_list[:,0]*np.power(x_dot_list[:,1],2), label='rho * omega^2 without CBF')
 #plt.plot(np.sqrt(k + np.power(x_dot_list[:,0] * x_dot_list[:,1], 2)), label='|v_x * omega|')
 plt.ylabel('rho * omega^2')
 plt.xlabel('time')
@@ -77,18 +79,18 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
-plt.subplot(2,2,2)
+plt.subplot(2,1,1)
 plt.title('With CBF')
-plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP trajectory')
+plt.plot(x_list[:,0]*np.cos(x_list[:,1]), x_list[:,0]*np.sin(x_list[:,1]), label='DMP with CBF')
 plt.scatter(dmp_traj.x_goal[0]*np.cos(dmp_traj.x_goal[1]), dmp_traj.x_goal[0]*np.sin(dmp_traj.x_goal[1]), label='Goal', color='red')
 plt.scatter(dmp_traj.x_0[0]*np.cos(dmp_traj.x_0[1]), dmp_traj.x_0[0]*np.sin(dmp_traj.x_0[1]), label='Start', color='green')
 plt.ylabel('y')
 plt.xlabel('x')
 plt.legend()
-plt.subplot(2,2,4)
-plt.plot(x_list[:,0]*np.power(x_dot_list[:,1],2), label='rho * omega^2')
+plt.subplot(2,1,2)
+plt.plot(x_list[:,0]*np.power(x_dot_list[:,1],2), label='rho * omega^2 with CBF')
 #plt.plot(np.sqrt(k + np.power(x_dot_list[:,0] * x_dot_list[:,1], 2)), label='|v_x * omega|')
-plt.axhline(y = mu_s*g, color='r', linestyle='-', label='mu_s * g')
+# plt.axhline(y = mu_s*g, color='r', linestyle='-', label='mu_s * g')
 plt.ylabel('rho * omega^2')
 plt.xlabel('time')
 plt.legend()
