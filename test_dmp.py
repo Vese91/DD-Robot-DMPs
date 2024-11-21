@@ -15,18 +15,18 @@ g = 9.81 # gravity acceleration [m/s^2]
 alpha = 10 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)  
 
-#generate a ref trajectory
+# Generate a ref trajectory (not a closed one!) 
 N = 1000
 freq = 1/N/2
 t = np.linspace(0, N)
 x = np.cos(2*math.pi*freq*t)
 y = np.sin(2*math.pi*freq*t)
-path = np.vstack((np.sqrt(x**2 + y**2), np.arctan2(y, x))).T
+path = np.vstack((np.sqrt(x**2 + y**2), np.arctan2(y, x))).T  # rho, theta
 
 plt.plot(path[:,0]*np.cos(path[:,1]), path[:,0]*np.sin(path[:,1]), label='Reference trajectory')
 plt.show()
 
-# train and execute a dmp in polar coordinates
+# train and execute a dmp in polar coordinates 
 n_bfs = 50
 dmp_traj = dmp.DMPs_cartesian(n_dmps=2, n_bfs=n_bfs, dt=0.01, tol=0.01)
 # dmp_traj.w = np.zeros((2, n_bfs+1))
@@ -119,7 +119,7 @@ plt.grid()
 
 plt.show()
 
-
+print('>> End of the script')
 
 
 
