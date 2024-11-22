@@ -39,7 +39,8 @@ class CBF():
         rho = dmp_traj.x[0]
 
         f_1 = v_r / self.tau 
-        #f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
+        # f2 = omega / self.tau
+        # f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
         f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * dmp_traj.cs.s)/self.tau
 
         f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
