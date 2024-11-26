@@ -59,17 +59,31 @@ class CBF():
         forc_term_2 = f[1]  # forcing term for y
 
         # Inputs
-        u = np.array([[K1*forc_term_1-K1*(xg-x0)*self.s],[K2*forc_term_2-K2*(yg-y0)*self.s]])  # input vector
+        u = np.array([[K1*forc_term_1-K1*(xg-x0)*dmp_traj.cs.s],[K2*forc_term_2-K2*(yg-y0)*dmp_traj.cs.s]])  # input vector
 
         # CBF 
-        h = mu_s*g - (x*dy-y*dx)**2/((x^2+y^2)^(3/2))  # constraint function
+        h = mu_s*g - ((x*dy-y*dx)**2)/((x**2+y**2)**(3./2.))  # constraint function
         # Gradient of h components
-        dh1 = (3*x*(x*dy-y*dx)**2-2*dy*(x*dy-y*dx)*(x**2+y**2)**3)/((x**2+y**2)**(5/2))  # derivative of h with respect to x
-        dh2 = (3*y*(x*dy-y*dx)**2-2*dx*(x*dy-y*dx)*(x**2+y**2)**3)/((x**2+y**2)**(5/2))  # derivative of h with respect to y
-        dh3 = (2*y*(x*dy-y*dx))/((x^2+y^2)**(3/2))  # derivative of h with respect to dx 
-        dh4 = (-2*x*(x*dy-y*dx))/((x^2+y^2)^(3/2))  # derivative of h with respect to dy
+        dh1 = (3*x*((x*dy-y*dx)**2)-2*dy*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to x
+        dh2 = (3*y*((x*dy-y*dx)**2)-2*dx*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to y
+        dh3 = (2*y*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dx 
+        dh4 = (-2*x*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dy
         # Lie derivatives of h
         Lfh = dh1*f1 + dh2*f2 + dh3*f3 + dh4*f4  # Lie derivative of h
+        # Lie derivatives of g
+        Lgh = np.matmul(np.array([dh1, dh2, dh3, dh4]), G)
+        Lghu = np.matmul(Lgh, u)  # Lie derivative of h with respect to u
+
+        dot_h = Lfh + Lghu  # time derivative of h
+        Psi = dot_h + alpha*(h**exp)
+        K_psi = - np.nan_to_num(Lgh.T / (Lgh @ Lgh.T))
+
+        # u_safe
+        if Psi >= 0:
+            u_safe = np.array([0, 0])
+        elif Psi < 0:
+            u_safe = K_psi.T * Psi
+        return u_safe, Psi
 
 
         # K_v = dmp_traj.K

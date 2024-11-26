@@ -42,8 +42,8 @@ dmp_traj.x_0 = np.array([-2, 2])  # new start in cartesian coordinates
 dmp_traj.x_goal = np.array([3, -1.0])  # new goal in cartesian coordinates
 dmp_traj.reset_state()  # reset the state of the DMPs
 x_list = np.array(dmp_traj.x) # x, y
-x_dot_list = np.array(dmp_traj.x)  # v_x, v_y
-x_ddot_list = np.array(dmp_traj.x)  # a_x, a_y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
 # Loop
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
@@ -63,7 +63,7 @@ plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='xg')
 plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj.')
 plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
 plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
-plt.title('Learnt vs Reference')
+plt.title('Learnt vs Reference WITHOUT CBF')
 plt.legend()
 plt.show()
 
@@ -71,7 +71,7 @@ plt.subplot(2,1,1)
 plt.plot(F_cf1, 'b--',label='Centrifugal force (ref)')  # centrifugal force
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
-plt.title('Centrifugal force')
+plt.title('Centrifugal force WITHOUT CBF')
 
 plt.subplot(2,1,2)
 plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
@@ -80,6 +80,46 @@ plt.legend()
 plt.show()
 
 # DMPs execution (with CBF)
+cbf = CBF()
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, g, exp)
+    x, x_dot, x_ddot = dmp_traj.step(external_force=external_force)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Centrifugal force
+F_cf1 = (ref_path[:,0]*ref_vel[:,1]-ref_path[:,1]*ref_vel[:,0])**2/((ref_path[:,0]**2+ref_path[:,1]**2)**(3/2))  # centrifugal force in ref path
+F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))  # centrifugal force in learnt path
+
+# Plot the result
+plt.plot(ref_path[:,0], ref_path[:,1],'r--',label='Reference traj.')
+plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='x0')
+plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='xg')
+plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj.')
+plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
+plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
+plt.title('Learnt vs Reference WITH CBF')
+plt.legend()
+plt.show()
+
+plt.subplot(2,1,1)
+plt.plot(F_cf1, 'b--',label='Centrifugal force (ref)')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.title('Centrifugal force WITH CBF')
+
+plt.subplot(2,1,2)
+plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.show()
 
 
-print(">> End of the script")
+# print(">> End of the script")
