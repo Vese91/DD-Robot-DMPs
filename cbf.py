@@ -29,23 +29,66 @@ class CBF():
         return f
     
     def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, g, exp):
-        #K_v = dmp_traj.K
-        K_w = dmp_traj.K
-        #D_v = dmp_traj.D
-        D_w = dmp_traj.D
-        omega = dmp_traj.dx[1]
-        v_r = dmp_traj.dx[0]
-        v_t = omega * dmp_traj.x[0] #CORRECT
-        rho = dmp_traj.x[0]
+        
+        # Coefficients and variables
+        K1 = dmp_traj.K  # spring constant 1
+        K2 = dmp_traj.K  # spring constant 2
+        D1 = dmp_traj.D  # damping constant 1
+        D2 = dmp_traj.D  # damping constant 2
+        x0 = dmp_traj.x_0[0]  # initial position (x-coordinate)
+        y0 = dmp_traj.x_0[1]  # initial position (y-coordinate)
+        xg = dmp_traj.x_goal[0]  # goal position (x-coordinate)
+        yg = dmp_traj.x_goal[1]  # goal position (y-coordinate)
+        x = dmp_traj.x[0]  # x position
+        y = dmp_traj.x[1]  # y position 
+        dx = dmp_traj.dx[0]  # x velocity
+        dy = dmp_traj.dx[1]  # y velocity
 
-        f_1 = v_r / self.tau 
+        # Drift term of the system
+        f1 = dx / self.tau
+        f2 = dy / self.tau
+        f3 = (K1*(xg-x) - D1*dx) / self.tau
+        f4 = (K2*(yg-y) - D2*dy) / self.tau 
+
+        # Input mapping
+        G = np.array([[0,0],[0,0],[1,0],[0,1]]) 
+
+        # Forcing term of the system
+        f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
+        forc_term_1 = f[0]  # forcing term for x
+        forc_term_2 = f[1]  # forcing term for y
+
+        # Inputs
+        u = np.array([[K1*forc_term_1-K1*(xg-x0)*self.s],[K2*forc_term_2-K2*(yg-y0)*self.s]])  # input vector
+
+        # CBF 
+        h = mu_s*g - (x*dy-y*dx)**2/((x^2+y^2)^(3/2))  # constraint function
+        # Gradient of h components
+        dh1 = (3*x*(x*dy-y*dx)**2-2*dy*(x*dy-y*dx)*(x**2+y**2)**3)/((x**2+y**2)**(5/2))  # derivative of h with respect to x
+        dh2 = (3*y*(x*dy-y*dx)**2-2*dx*(x*dy-y*dx)*(x**2+y**2)**3)/((x**2+y**2)**(5/2))  # derivative of h with respect to y
+        dh3 = (2*y*(x*dy-y*dx))/((x^2+y^2)**(3/2))  # derivative of h with respect to dx 
+        dh4 = (-2*x*(x*dy-y*dx))/((x^2+y^2)^(3/2))  # derivative of h with respect to dy
+        # Lie derivatives of h
+        Lfh = dh1*f1 + dh2*f2 + dh3*f3 + dh4*f4  # Lie derivative of h
+
+
+        # K_v = dmp_traj.K
+        # K_w = dmp_traj.K
+        # D_v = dmp_traj.D
+        # D_w = dmp_traj.D
+        # omega = dmp_traj.dx[1]
+        # v_r = dmp_traj.dx[0]
+        # v_t = omega * dmp_traj.x[0] #CORRECT
+        # rho = dmp_traj.x[0]
+
+        # f_1 = v_r / self.tau 
         # f2 = omega / self.tau
         # f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
-        f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * dmp_traj.cs.s)/self.tau
+        # f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * dmp_traj.cs.s)/self.tau
 
-        f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
-        f_v = f[0]  # forcing term for v
-        f_omega = f[1]  # forcing term for omega
+        # f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
+        # f_v = f[0]  # forcing term for v
+        # f_omega = f[1]  # forcing term for omega
 
         psi = -omega**2*f_1-2*rho*omega*(f_4 + K_w * f_omega) + alpha * (mu_s*g - v_t*omega)**exp
 
@@ -58,23 +101,39 @@ class CBF():
             status = False
             u_safe = np.array([0, 1/(2*rho*omega)])*psi
             return u_safe, psi
+        
+    # def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, g, exp):
+    #     #K_v = dmp_traj.K
+    #     K_w = dmp_traj.K
+    #     #D_v = dmp_traj.D
+    #     D_w = dmp_traj.D
+    #     omega = dmp_traj.dx[1]
+    #     v_r = dmp_traj.dx[0]
+    #     v_t = omega * dmp_traj.x[0] #CORRECT
+    #     rho = dmp_traj.x[0]
+
+    #     f_1 = v_r / self.tau 
+    #     # f2 = omega / self.tau
+    #     # f_3 = (K_v * (dmp_traj.x_goal[0] - dmp_traj.x[0]) - D_v * v_r - K_v * (dmp_traj.x_goal[0] - dmp_traj.x_0[0]) * self.s)/self.tau
+    #     f_4 = (K_w * (dmp_traj.x_goal[1] - dmp_traj.x[1]) - D_w * omega - K_w * (dmp_traj.x_goal[1] - dmp_traj.x_0[1]) * dmp_traj.cs.s)/self.tau
+
+    #     f = self.compute_forcing_term(dmp_traj) / self.tau  # forcing terms
+    #     f_v = f[0]  # forcing term for v
+    #     f_omega = f[1]  # forcing term for omega
+
+    #     psi = -omega**2*f_1-2*rho*omega*(f_4 + K_w * f_omega) + alpha * (mu_s*g - v_t*omega)**exp
+
+    #     # u_safe
+    #     if psi >= 0:
+    #         u_safe = np.array([0, 0])  # this includes the case when v_x = 0 or omega = 0
+    #         status = True
+    #         return u_safe, psi
+    #     else:
+    #         status = False
+    #         u_safe = np.array([0, 1/(2*rho*omega)])*psi
+    #         return u_safe, psi
 
 
-        #if (omega * v_x) > 0:
-        #    psi_plus = - omega * (f_3 + K_v * f_v) - v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g - v_x * omega))**exp
-        #    if psi_plus >= 0:
-        #        return np.array([0, 0])
-        #    else:
-        #        u_safe = 1 / (v_x**2 + omega**2) * psi_plus * np.array([omega, v_x])
-        #        return u_safe
-        #elif (omega * v_x) < 0:
-        #    psi_minus = omega * (f_3 + K_v * f_v) + v_x * (f_4 + K_w * f_omega) + alpha * ((mu_s * g + v_x * omega))**exp
-        #    if psi_minus >= 0:
-        #        return np.array([0, 0])
-        #    else:
-        #        u_safe = -1 / (v_x**2 + omega**2) * psi_minus * np.array([omega, v_x])
-        #        return u_safe
-        #else:
-        #    return np.array([0, 0])
+        
 
         

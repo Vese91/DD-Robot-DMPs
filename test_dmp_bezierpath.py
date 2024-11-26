@@ -45,22 +45,22 @@ x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.x)  # v_x, v_y
 x_ddot_list = np.array(dmp_traj.x)  # a_x, a_y
 # Loop
-while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < 0.01:
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     x, x_dot, x_ddot = dmp_traj.step()  # execute the DMPs
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
 # Centrifugal force
-F_cf1 = (ref_path[:,0]*ref_vel[:,1]-ref_path[:,1]*ref_vel[:,0])**2/((ref_path[:,0]**2+ref_path[:,1]**2)**(3/2))
-F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))
-
+F_cf1 = (ref_path[:,0]*ref_vel[:,1]-ref_path[:,1]*ref_vel[:,0])**2/((ref_path[:,0]**2+ref_path[:,1]**2)**(3/2))  # centrifugal force in ref path
+F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))  # centrifugal force in learnt path
 
 # Plot the result
-plt.plot(ref_path[:,0], ref_path[:,1],'b--',label='Reference traj.')
+plt.plot(ref_path[:,0], ref_path[:,1],'r--',label='Reference traj.')
 plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='x0')
 plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='xg')
-plt.plot(x_list[:,0], x_list[:,1],'r-',label='Learnt traj.')
+plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj.')
 plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
 plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
 plt.title('Learnt vs Reference')
@@ -79,6 +79,7 @@ plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static f
 plt.legend()
 plt.show()
 
+# DMPs execution (with CBF)
 
 
 print(">> End of the script")
