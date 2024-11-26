@@ -134,6 +134,11 @@ def evaluate_bezier(points, n):
     # Remove duplicate rows while preserving order
     bezier_interp = unique_rows(bezier_interp)
     bezier_vel = unique_rows(bezier_vel)
+    
+    # Ensure both arrays have the same length
+    min_length = min(len(bezier_interp), len(bezier_vel))
+    bezier_interp = bezier_interp[:min_length]
+    bezier_vel = bezier_vel[:min_length]
 
     return bezier_interp, bezier_vel
 
