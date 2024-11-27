@@ -20,9 +20,20 @@ alpha = 50 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
 
 # Reference trajectory (Cartesian coordinates) 
-m = 50  # number of points between control points
-waypoints = np.array([[-2,2],[-0.53,1.71],[0.81,1],[-0.76,0.30],[-1.45,-0.70],[-0.43,-1.21],[1.26,-1.29],[3.00,-1.0]])
-ref_path, ref_vel = bz.evaluate_bezier(waypoints, m)  # evaluate Interpolating Bezier curves
+# m = 50  # number of points between control points
+# waypoints = np.array([[-2,2],[-0.53,1.71],[0.81,1],[-0.76,0.30],[-1.45,-0.70],[-0.43,-1.21],[1.26,-1.29],[3.00,-1.0]])
+# ref_path, ref_vel = bz.evaluate_bezier(waypoints, m)  # evaluate Interpolating Bezier curves
+
+N = 1000  # discretization points
+a0 = 3.0  # ellipse major axis
+a1 = 1.0  # ellipse minor axis
+t = np.linspace(0,np.pi,N)  # time
+x = a0*np.cos(t)  # x
+y = a1*np.sin(t)  # y
+dx = -a0*np.sin(t)  # dx
+dy = a1*np.cos(t)  # dy
+ref_path = np.vstack((x,y)).T  # reference path
+ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
 plt.plot(ref_path[:,0], ref_path[:,1],'b-',label='Reference trajectory')
 plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
@@ -33,14 +44,13 @@ plt.show()
 
 # DMPs training
 n_bfs = 100  # number of basis functions
-Tf = len(waypoints)-1  # final time (every piece of bezier curve has a duration of 1)
-dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 100, dt = 0.01, T = Tf,
+dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 100, dt = 0.01, T = t[-1],
                               alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs
 dmp_traj.imitate_path(x_des=ref_path)  # train the DMPs
 
 # DMPs execution (no CBF)
-dmp_traj.x_0 = np.array([-2, 1.5])  # new start in cartesian coordinates
-dmp_traj.x_goal = np.array([3, -1.0])  # new goal in cartesian coordinates
+dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
+dmp_traj.x_goal = np.array([-2.5, 0.0])  # new goal in cartesian coordinates
 dmp_traj.reset_state()  # reset the state of the DMPs
 x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
