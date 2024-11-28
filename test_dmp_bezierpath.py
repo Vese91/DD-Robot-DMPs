@@ -64,7 +64,7 @@ plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='xg')
 plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj.')
 plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
 plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
-plt.title('Learnt vs Reference (no CBF)')
+#plt.title('Learnt vs Reference (no CBF)')
 plt.legend()
 plt.show()
 
@@ -72,7 +72,7 @@ plt.subplot(2,1,1)
 plt.plot(F_cf1, 'b--',label='Centrifugal force (ref)')  # centrifugal force
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
-plt.title('Centrifugal force (no CBF)')
+#plt.title('Centrifugal force (no CBF)')
 
 plt.subplot(2,1,2)
 plt.plot(F_cf2, 'b-',label='Centrifugal force (learnt)')  # centrifugal force
@@ -111,7 +111,7 @@ plt.plot(learnt_path[-1,0], learnt_path[-1,1],'kx',label='xg')
 plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj. with CBF')
 plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
 plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
-plt.title('Learnt vs Learnt (with CBF)')
+#plt.title('Learnt vs Learnt (with CBF)')
 plt.legend()
 plt.show()
 
@@ -119,10 +119,10 @@ plt.subplot(2,1,1)
 plt.plot(F_cf1, 'b--',label='Centrifugal force (no CBF)')  # centrifugal force
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
-plt.title('Centrifugal force (with CBF)')
+#plt.title('Centrifugal force (with CBF)')
 
 plt.subplot(2,1,2)
-plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
+plt.plot(F_cf2, 'b-',label='Centrifugal force (with CBF)')  # centrifugal force
 plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
 plt.show()
