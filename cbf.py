@@ -28,7 +28,7 @@ class CBF():
         f = np.nan_to_num(M @ f)
         return f
     
-    def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, g, exp):
+    def compute_u_safe_dmp_traj(self, dmp_traj, alpha, mu_s, g, exp, obs_force = np.array([0,0])):
         
         # Coefficients and variables
         K1 = dmp_traj.K  # spring constant 1
@@ -47,8 +47,8 @@ class CBF():
         # Drift term of the system
         f1 = dx / self.tau
         f2 = dy / self.tau
-        f3 = (K1*(xg-x) - D1*dx) / self.tau
-        f4 = (K2*(yg-y) - D2*dy) / self.tau 
+        f3 = (K1*(xg-x) - D1*dx + obs_force[0]) / self.tau
+        f4 = (K2*(yg-y) - D2*dy + obs_force[1]) / self.tau 
 
         # Input mapping
         G = np.array([[0,0],[0,0],[1,0],[0,1]]) 

@@ -2,7 +2,7 @@ import numpy as np
 import copy 
 import matplotlib.pyplot as plt
 from matplotlib import rc
-from dmp import dmp
+from dmp import dmp, obstacle_superquadric as obs
 import bezier_interp as bz
 from cbf import CBF
 
@@ -16,7 +16,7 @@ CBFs are used to ensure safety in the system, while DMPs are used to generate sm
 # Dynamic parameters
 mu_s = 0.7  # static friction coefficient
 g = 9.81 # gravity acceleration [m/s^2]
-alpha = 50 # extended class-K function parameter (straight line)
+alpha = 10 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
 
 # Reference trajectory (Cartesian coordinates) 
@@ -84,6 +84,7 @@ plt.show()
 learnt_path = copy.deepcopy(x_list)
 learnt_vel = copy.deepcopy(x_dot_list)
 
+
 # DMPs execution (with CBF)
 cbf = CBF()
 dmp_traj.reset_state()  # reset the state of the DMPs
@@ -138,4 +139,135 @@ plt.legend()
 plt.show()
 
 
-print(">> End of the script")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# DMPs execution (with obstacles, no CBF)
+dmp_traj.x_0 = np.array([-2, 1.5])  # new start in cartesian coordinates
+dmp_traj.x_goal = np.array([3, -1.0])  # new goal in cartesian coordinates
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+
+obstacle_center = np.array(learnt_path[int(len(learnt_path)/3)])
+radius = 0.3
+obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
+
+obstacle = obs.Obstacle_Static(center = obstacle_center, axis = obstacle_axis, A = 1, eta = 1, coeffs = np.ones(dmp_traj.n_dmps))
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    obs_force = obstacle.gen_external_force(dmp_traj.x)
+    x, x_dot, x_ddot = dmp_traj.step(external_force=obs_force)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Centrifugal force
+F_cf1 = (ref_path[:,0]*ref_vel[:,1]-ref_path[:,1]*ref_vel[:,0])**2/((ref_path[:,0]**2+ref_path[:,1]**2)**(3/2))  # centrifugal force in ref path
+F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))  # centrifugal force in learnt path
+
+# Plot the result
+plt.plot(learnt_path[:,0], learnt_path[:,1],'r--',label='Learnt traj.')
+plt.plot(learnt_path[0,0], learnt_path[0,1],'ko',label='x0')
+plt.plot(learnt_path[-1,0], learnt_path[-1,1],'kx',label='xg')
+plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj. with CBF')
+plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
+plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
+# plot a circle for the obstacle
+circle = plt.Circle(obstacle_center, obstacle_axis[0], color='g', fill=False)
+plt.gca().add_artist(circle)
+plt.title('Learnt vs Learnt (with obstacles, no CBF)')
+plt.legend()
+plt.show()
+
+plt.subplot(2,1,1)
+plt.plot(F_cf1, 'b--',label='Centrifugal force (with obstacles, no CBF)')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.title('Centrifugal force (with obstacles, no CBF)')
+
+plt.subplot(2,1,2)
+plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.show()
+
+
+# DMPs execution (with obstacles, with CBF)
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+
+obstacle = obs.Obstacle_Static(center = obstacle_center, axis = obstacle_axis, A = 1, eta = 1, coeffs = np.ones(dmp_traj.n_dmps))
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    obs_force = obstacle.gen_external_force(dmp_traj.x)
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, g, exp, obs_force)
+    x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Centrifugal force
+F_cf1 = (learnt_path[:,0]*learnt_vel[:,1]-learnt_path[:,1]*learnt_vel[:,0])**2/((learnt_path[:,0]**2+learnt_path[:,1]**2)**(3/2))  # centrifugal force in ref path (with CBF)
+F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))  # centrifugal force in learnt path (with CBF)
+
+# Plot the result
+plt.plot(learnt_path[:,0], learnt_path[:,1],'r--',label='Learnt traj.')
+plt.plot(learnt_path[0,0], learnt_path[0,1],'ko',label='x0')
+plt.plot(learnt_path[-1,0], learnt_path[-1,1],'kx',label='xg')
+plt.plot(x_list[:,0], x_list[:,1],'b-',label='Learnt traj. with CBF')
+plt.plot(x_list[0,0], x_list[0,1],'go',label='new x0')
+plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
+# plot a circle for the obstacle
+circle = plt.Circle(obstacle_center, obstacle_axis[0], color='g', fill=False)
+plt.gca().add_artist(circle)
+plt.title('Learnt vs Learnt (with obstacles, with CBF)')
+plt.legend()
+plt.show()
+
+plt.subplot(2,1,1)
+plt.plot(F_cf1, 'b--',label='Centrifugal force (with obstacles, with CBF)')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.title('Centrifugal force (with obstacles, with CBF)')
+
+plt.subplot(2,1,2)
+plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
+plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.legend()
+plt.show()
+
+# plt.subplot(2,1,1)
+# plt.plot(x_dot_list[:,0],'b-',label = 'dx (with CBF)')
+# plt.plot(learnt_vel[:,0],'r-',label = 'dx (no CBF)')
+# plt.legend()
+
+# plt.subplot(2,1,2)
+# plt.plot(x_dot_list[:,1],'b-',label = 'dy (with CBF)')
+# plt.plot(learnt_vel[:,1],'r-',label = 'dy (no CBF)')
+# plt.legend()
+# plt.show()
+
+
+
+
+# print(">> End of the script")
