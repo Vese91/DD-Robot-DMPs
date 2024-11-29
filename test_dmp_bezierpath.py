@@ -16,7 +16,7 @@ CBFs are used to ensure safety in the system, while DMPs are used to generate sm
 # Dynamic parameters
 mu_s = 0.7  # static friction coefficient
 g = 9.81 # gravity acceleration [m/s^2]
-alpha = 10 # extended class-K function parameter (straight line)
+alpha = 15 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
 
 # Reference trajectory (Cartesian coordinates) 
@@ -138,24 +138,14 @@ plt.plot(learnt_vel[:,1],'r-',label = 'dy (no CBF)')
 plt.legend()
 plt.show()
 
+print(">> First part")
 
 
+# ROBOT CONTROLS
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# OBSTACLE
+#
 # DMPs execution (with obstacles, no CBF)
 dmp_traj.x_0 = np.array([-2, 1.5])  # new start in cartesian coordinates
 dmp_traj.x_goal = np.array([3, -1.0])  # new goal in cartesian coordinates
@@ -270,4 +260,4 @@ plt.show()
 
 
 
-# print(">> End of the script")
+print(">> End of the script")
