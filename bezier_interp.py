@@ -14,6 +14,7 @@ Outputs:
 '''
 
 import numpy as np
+import math
 
 def unique_rows(array):
     '''
@@ -171,6 +172,45 @@ def convert_to_polar_coord(path, vel):
 
     polar_vel = np.array(polar_vel)  # convert list to numpy array
     return polar_path, polar_vel
+
+def regular_bezier_curve(control_points, Tf, Ts):
+    '''
+    Function that calculates the regular n-degree Bezier curve given n+1 control points.
+
+    Inputs:
+    - control_points: list of control points ((n+1,2) numpy array)
+    - Tf: final time (scalar)
+    - Ts: sampling time (scalar)
+
+    Outputs:
+    - bezier_curve: list of points that represent the Bezier curve
+    - bezier_vel: list of velocities that represent the Bezier curve
+    '''
+
+    # Bezier curve
+    n = len(control_points)-1  # degree of the Bezier curve
+    N = round(Tf / Ts)  # number of points to evaluate the Bezier curve
+    t = np.linspace(0, Tf, N)  # time vector
+    bezier_curve = np.zeros((2,N))  # initialize the Bezier curve
+    for j in range(1,N+1):
+        s = t[j-1]  # current time
+        bezier_temp = 0  # initialize the Bezier curve at time s
+        for i in range(n+1):
+            bezier_temp = bezier_temp + math.comb(n,i)*(1-float(s/Tf))**(n-i)*(float(s/Tf))**i*control_points[i]  # calculate the Bezier curve at time s
+            bezier_curve[:,j-1] = bezier_temp  # store the Bezier curve at time s
+
+    # First derivative of the Bezier curve
+    bezier_vel = np.zeros((2,N))  # initialize the Bezier curve
+    for j in range(1,N+1):
+        s = t[j-1]
+        vel_temp = 0
+        for i in range(n):
+            vel_temp = vel_temp + math.comb(n-1,i)*(1-float(s/Tf))**((n-1)-i)*(float(s/Tf))**i*(control_points[i+1]-control_points[i])  # calculate the Bezier curve at time s
+            bezier_vel[:,j-1] = vel_temp
+    
+    bezier_vel = n*bezier_vel 
+
+    return bezier_curve, bezier_vel
     
 
   
