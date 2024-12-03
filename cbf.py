@@ -76,7 +76,8 @@ class CBF():
         # U_safe construction
         dot_h = Lfh + Lghu  # time derivative of h
         Psi = dot_h + alpha*(h**exp)  # safety function
-        K_psi = - np.nan_to_num(Lgh.T / (Lgh @ Lgh.T))  # gain matrix
+        K_psi = - Lgh.T / (Lgh @ Lgh.T)  # gain matrix
+        # K_psi = - np.nan_to_num(Lgh.T / (Lgh @ Lgh.T))  # gain matrix
         if Psi >= 0:
             u_safe = np.array([0, 0])
         elif Psi < 0:
