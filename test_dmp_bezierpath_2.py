@@ -37,6 +37,8 @@ plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
 plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='Goal')
 plt.title('Ref. training trajectory')
 plt.legend()
+# ax = plt.gca()
+# ax.set_aspect('equal', adjustable='box')
 plt.show()
 
 # DMPs training
@@ -84,6 +86,17 @@ F_cf2 = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:
 # plt.subplot(2,1,2)
 # plt.plot(F_cf2, 'b-',label='Centrifugal force (learnt)')  # centrifugal force
 # plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+# plt.legend()
+# plt.show()
+
+# plt.subplot(2,1,1)
+# plt.plot(ref_vel[:,0],'r--',label='Ref. velocity (dx)')
+# plt.plot(x_dot_list[:,0],'b-',label='DMPs velocity (dx)')
+# plt.legend()
+
+# plt.subplot(2,1,2)
+# plt.plot(ref_vel[:,1],'r--',label='Ref. velocity (dy)')
+# plt.plot(x_dot_list[:,1],'b-',label='Ref. velocity (dy)')
 # plt.legend()
 # plt.show()
 
@@ -154,13 +167,13 @@ x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
 x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
 
-obstacle_center = np.array(learnt_path[int(len(learnt_path)/3)]) + np.array([-0.1,-0.1])  # obstacle center
+obstacle_center = np.array(learnt_path[int(len(learnt_path)/3)]) + np.array([-0.05,-0.05])  # obstacle center
 radius = 0.15
 obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
 
 # superquadric parameters
 lmbda = 5.0  # gain of relative orientation function (-lambda*cos(theta))
-beta = 6.0  # exponent of the relative orientation function (-cos(theta)^beta)
+beta = 2.0  # exponent of the relative orientation function (-cos(theta)^beta)
 eta = 1.0  # exponent of the superquadric function (C^eta(x))
 
 obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
