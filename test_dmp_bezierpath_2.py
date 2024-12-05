@@ -201,19 +201,18 @@ plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='new xg')
 # plot a circle for the obstacle
 circle = plt.Circle(obstacle_center, obstacle_axis[0], color='g', fill=False)
 plt.gca().add_artist(circle)
-plt.title('Learnt vs Learnt (with obstacles, no CBF)')
 plt.legend()
 plt.show()
 
 plt.subplot(2,1,1)
 plt.plot(F_cf1, 'b--',label='Centrifugal force (with obstacles, no CBF)')  # centrifugal force
-plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.axhline(y = mu_s * g, color='r', linestyle='--', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
-plt.title('Centrifugal force (with obstacles, no CBF)')
+
 
 plt.subplot(2,1,2)
 plt.plot(F_cf2, 'b-',label='Centrifugal force')  # centrifugal force
-plt.axhline(y = mu_s * g, color='r', linestyle='-', label='mu_s * g') # static friction (centripeal force)
+plt.axhline(y = mu_s * g, color='r', linestyle='--', label='mu_s * g') # static friction (centripeal force)
 plt.legend()
 plt.show()
 
