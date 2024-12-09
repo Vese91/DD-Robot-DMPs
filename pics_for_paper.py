@@ -41,7 +41,7 @@ ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
 # DMPs training
 n_bfs = 100  # number of basis functions
-dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 200, dt = 0.01, T = t[-1],
+dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 150, dt = 0.01, T = t[-1],
                               alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs
 dmp_traj.imitate_path(x_des=ref_path)  # train the DMPs
 
