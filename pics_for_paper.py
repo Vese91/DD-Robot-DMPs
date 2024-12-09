@@ -32,12 +32,12 @@ dy = a1*np.cos(t)  # dy
 ref_path = np.vstack((x,y)).T  # reference path
 ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
-plt.plot(ref_path[:,0], ref_path[:,1],'b-',label='Reference trajectory')
-plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
-plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='Goal')
-plt.title('Ref. training trajectory')
-plt.legend()
-plt.show()
+# plt.plot(ref_path[:,0], ref_path[:,1],'b-',label='Reference trajectory')
+# plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
+# plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='Goal')
+# plt.title('Ref. training trajectory')
+# plt.legend()
+# plt.show()
 
 # DMPs training
 n_bfs = 100  # number of basis functions
@@ -72,12 +72,13 @@ x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
 x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
 
-obstacle_center = np.array(learnt_path[int(len(learnt_path)/3)]) + np.array([-0.05,-0.05])  # obstacle center
-radius = 0.15
+# obstacle_center = np.array(learnt_path[int(3*len(learnt_path)/5)]) + np.array([-0.05,-0.05])  # obstacle center
+obstacle_center = np.array(learnt_path[int(4*len(learnt_path)/7)]) + np.array([-0.05,-0.05])  # obstacle center
+radius = 0.2
 obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
 
 # Superquadric parameters for obstacle
-lmbda = 5.0  # gain of relative orientation function (-lambda*cos(theta))
+lmbda = 2.0  # gain of relative orientation function (-lambda*cos(theta))
 beta = 2.0  # exponent of the relative orientation function (-cos(theta)^beta)
 eta = 1.0  # exponent of the superquadric function (C^eta(x))
 obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
@@ -101,6 +102,7 @@ plt.gca().add_artist(circle)
 plt.xlabel('x [m]')
 plt.ylabel('y [m]')
 plt.legend()
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
 # Save the learnt trajectory for the next part
@@ -135,6 +137,7 @@ plt.gca().add_artist(circle)
 plt.xlabel('x [m]')
 plt.ylabel('y [m]')
 plt.legend()
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
 # Save the learnt trajectory for the next part
@@ -150,17 +153,16 @@ F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])*
 plt.subplot(2,1,1)
 plt.plot(tVec,F_nocbf,'b-',label='centrif. force (no cbf)')
 plt.axhline(y = mu_s * g, color='r', linestyle='--', label=r'$\mu_s \, g$') 
-plt.ylim([0.0, 8.5])
 plt.ylabel('F [N]')
 plt.legend(loc = 'upper left')
 
 plt.subplot(2,1,2)
 plt.plot(tVec,F_cbf,'b-',label='centrif. force (with cbf)')
 plt.axhline(y = mu_s * g, color='r', linestyle='--', label=r'$\mu_s \, g$') 
-plt.ylim([0.0, 8.5])
 plt.xlabel('Time [s]')
 plt.ylabel('F [N]')
 plt.legend(loc = 'upper left')
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
 
@@ -175,6 +177,7 @@ plt.gca().add_artist(circle)
 plt.xlabel('x [m]')
 plt.ylabel('y [m]')
 plt.legend()
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
 print(">> End of the script")
