@@ -150,25 +150,18 @@ F_nocbf = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_no
 F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])**2 / (obs_path_cbf[:,0]**2+obs_path_cbf[:,1]**2)**(3/2)
 
 # Plots
-plt.subplot(2,1,1)
-plt.plot(tVec,F_nocbf,'b-',label='centrif. force (no cbf)')
-plt.axhline(y = mu_s * g, color='r', linestyle='--', label=r'$\mu_s \, g$') 
-plt.ylabel('F [N]')
-plt.legend(loc = 'upper left')
-
-plt.subplot(2,1,2)
+plt.plot(tVec,F_nocbf,'r',linestyle='-',label='centrif. force (no cbf)')
 plt.plot(tVec,F_cbf,'b-',label='centrif. force (with cbf)')
-plt.axhline(y = mu_s * g, color='r', linestyle='--', label=r'$\mu_s \, g$') 
+plt.axhline(y = mu_s * g, color='k', linestyle='--', label=r'$\mu_s \, g$') 
 plt.xlabel('Time [s]')
 plt.ylabel('F [N]')
 plt.legend(loc = 'upper left')
 plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
-
 # Additional plot
 plt.plot(learnt_path[:,0], learnt_path[:,1],'k--',label='reference traj.', linewidth=1)
-plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'r-',label='executed traj. (no cbf)', linewidth=2)
+plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'r-',label='executed traj. (no cbf)', linewidth=1.3)
 plt.plot(obs_path_cbf[:,0], obs_path_cbf[:,1],'b-',label='executed traj. (with cbf)', linewidth=1.3)
 plt.plot(obs_path_nocbf[0,0], obs_path_nocbf[0,1],'go',label='start')
 plt.plot(obs_path_nocbf[-1,0], obs_path_nocbf[-1,1],'rx',label='goal')
@@ -177,6 +170,51 @@ plt.gca().add_artist(circle)
 plt.xlabel('x [m]')
 plt.ylabel('y [m]')
 plt.legend()
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
+plt.show()
+
+# Velocity plot
+plt.subplot(2,1,1)
+plt.plot(tVec,obs_vel_nocbf[:,0],'r',linestyle='-',label = r'$\dot{x}$ (no cbf)')
+plt.plot(tVec,obs_vel_cbf[:,0],'b',linestyle='-',label = r'$\dot{x}$ (with cbf)')
+plt.ylabel('Vel. [m/s]')
+plt.legend(loc = 'lower left')
+
+plt.subplot(2,1,2)
+plt.plot(tVec,obs_vel_nocbf[:,1],'r',linestyle='-',label = r'$\dot{y}$ (no cbf)')
+plt.plot(tVec,obs_vel_cbf[:,1],'b',linestyle='-',label = r'$\dot{y}$ (with cbf)')
+plt.xlabel('Time [s]')
+plt.ylabel('Vel. [m/s]')
+plt.legend(loc = 'lower left')
+plt.subplots_adjust(left=0.105, right=0.99, top=0.99)
+plt.show()
+
+# Calculate the robot commands from the Cartesian velocities
+# No CBF
+rho = np.sqrt(obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
+omega = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0]) / rho
+vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
+omega_ref_nocbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
+
+# With CBFs
+rho = np.sqrt(obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
+omega = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0]) / rho
+vx_ref_cbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
+omega_ref_cbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
+
+plt.subplot(2,1,1)
+plt.plot(tVec,vx_ref_nocbf,'r',linestyle='-',label = r'$v_x$ ref. (no cbf)')
+plt.plot(tVec,vx_ref_cbf,'b',linestyle='-',label = r'$v_x$ ref. (with cbf)')
+plt.legend(loc = 'upper right')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$v_x$ [m/s]')
+
+plt.subplot(2,1,2)
+plt.plot(tVec,omega_ref_nocbf,'r',linestyle='-',label = r'$\omega$ ref. (no cbf)')
+plt.plot(tVec,omega_ref_cbf,'b',linestyle='-',label = r'$\omega$ ref. (with cbf)')
+plt.legend(loc = 'upper right')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$\omega$ [rad/s]')
 plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
