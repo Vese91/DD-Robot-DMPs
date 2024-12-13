@@ -218,4 +218,7 @@ plt.ylabel(r'$\omega$ [rad/s]')
 plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 plt.show()
 
+
+# ROBOT SIMULATION
+
 print(">> End of the script")
