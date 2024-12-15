@@ -396,4 +396,7 @@ class DD_robot(object):
 
         return tVec, train_path, train_vel
     
+
+
+    
     
