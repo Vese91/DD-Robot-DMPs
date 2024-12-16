@@ -1,19 +1,38 @@
 import numpy as np
 
 class DDMR(object):
-    
+    '''
+    Differential-Drive Mobile Robot (DDMR) class.
+    '''
     def __init__(self, state = np.zeros(6), dt = 0.01, m = 0.0, I = 0.0):
         '''
-        Constructor for the DDMR class
+        Constructor for the DDMR class.
         '''
         self.state = state  # robot state
         self.dt = dt  # time step
         self.m = m  # mass
         self.I = I  # inertia
 
+    def inverse_dynamics(self, vx, omega):
+        '''
+        Calculate the control input using the inverse dynamics.
+
+        Inputs:
+            self: class object (state, time-step, mass, inertia)
+            vx: forward velocity (reference)
+            omega: angular velocity (reference)
+
+        Outputs:
+            F: driving force
+            T: driving torque
+        '''
+        F = self.m*vx/self.dt  # driving force
+        T = self.I*omega/self.dt  # driving torque
+        return F, T
+
     def dynamics_step(self, u = np.zeros(2)):
         '''
-        Calculate the next state of the robot using the dynamics
+        Calculate the next state of the robot using the dynamics.
 
         Inputs:
             self: class object (state, time-step, mass, inertia)
@@ -61,7 +80,7 @@ class DDMR(object):
             # Transition condition
             F_cf = self.m*self.state[3]*self.state[5]  # centrifugal force
             F_cp = np.sign(F_cf)*mu_s*self.m*g  # centrifugal force limit (centripetal force)
-            if np.abs(F_cf)>np.abs(F_cp):
+            if np.abs(F_cf) > np.abs(F_cp):
                 mode = 'slip'  # switch to slip state
         elif mode.lower() == 'slip':
             # Slip state
@@ -76,7 +95,7 @@ class DDMR(object):
             self.state = state_0 + self.dt*(f + np.matmul(B, u_effective))
 
             # Transition condition
-            if np.abs(self.state[4])<vy_critical:
+            if np.abs(self.state[4]) < vy_critical:
                 mode = 'grip'  # switch to grip state
         
         return self.state, mode

@@ -59,6 +59,12 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     # Centrifugal force
     F_cf = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))
 
+    # Calculate robot's commands from the Cartesian velocities
+    rho = np.sqrt(x_list[:,0]**2 + x_list[:,1]**2)
+    omega = (x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0]) / rho
+    vx_ref = rho * omega # reference forward velocity
+    omega_ref = omega # reference angular velocity
+
     # Plot the result
     plt.subplot(2,2,1)
     plt.plot(x_list[:,0], x_list[:,1],label=name)
@@ -81,15 +87,15 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     plt.grid(True)
 
     plt.subplot(2,2,3)
-    plt.plot(x_dot_list[:,0],label = 'vel_x ' + name)
+    plt.plot(vx_ref,label = r'$v_x$ ' + name)
     plt.legend()
-    plt.title('Velocity x')
+    plt.title(r'Velocity $v_x$')
     plt.grid(True)
 
     plt.subplot(2,2,4)
-    plt.plot(x_dot_list[:,1],label = 'vel_y ' + name)
+    plt.plot(omega,label = r'$\omega$ ' + name)
     plt.legend()
-    plt.title('Velocity y')
+    plt.title(r'Velocity $\omega$')
     plt.grid(True)
 
 
@@ -119,8 +125,8 @@ def test(dmp_traj, start, goal, cbfs = True, obst = True):
         obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
         # superquadric parameters
         lmbda = 5.0
-        beta = 5.0
-        eta = 5.0
+        beta = 2.0
+        eta = 1.0
         obstacles.append(obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
                                 lmbda = lmbda, beta=beta, eta=eta, coeffs = np.ones(dmp_traj.n_dmps)))
     
