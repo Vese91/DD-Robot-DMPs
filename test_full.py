@@ -138,7 +138,7 @@ def test(dmp_traj, start, goal, cbfs = True, obst = True):
         for obstacle in obstacles:
             curr_obst = copy.deepcopy(obstacle)
             freq_obst = 2
-            amp_obst = 0.2
+            amp_obst = 0.0
             vel_obst = np.array([0, amp_obst * 2*math.pi*2*np.cos(2*math.pi*freq_obst*iter*dmp_traj.cs.dt)])  # velocity of the curr_obst
             external_force += curr_obst.gen_external_force(dmp_traj.x, dmp_traj.dx - vel_obst)
             curr_obst.center += np.array([0, amp_obst * np.sin(2*math.pi*freq_obst*iter*dmp_traj.cs.dt)])  # move the curr_obst
