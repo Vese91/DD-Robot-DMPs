@@ -62,12 +62,22 @@ class CBF():
         u = np.array([[K1*forc_term_1-K1*(xg-x0)*dmp_traj.cs.s],[K2*forc_term_2-K2*(yg-y0)*dmp_traj.cs.s]])  # input vector
 
         # CBF 
-        h = mu_s*g - ((x*dy-y*dx)**2)/((x**2+y**2)**(3./2.))  # constraint function
-        # Gradient of h components
-        dh1 = (3*x*((x*dy-y*dx)**2)-2*dy*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to x
-        dh2 = (3*y*((x*dy-y*dx)**2)-2*dx*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to y
-        dh3 = (2*y*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dx 
-        dh4 = (-2*x*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dy
+        # h = mu_s*g - ((x*dy-y*dx)**2)/((x**2+y**2)**(3./2.))  # constraint function (old)
+        K_appr = 0.1  # approximation constant
+        h = mu_s*g - np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3 + K_appr)  # constraint function (new)
+
+        # Gradient of h components (old)
+        # dh1 = (3*x*((x*dy-y*dx)**2)-2*dy*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to x (old)
+        # dh2 = (3*y*((x*dy-y*dx)**2)-2*dx*(x*dy-y*dx)*((x**2+y**2)**3))/((x**2+y**2)**(5./2.))  # derivative of h with respect to y (old)
+        # dh3 = (2*y*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dx (old)
+        # dh4 = (-2*x*(x*dy-y*dx))/((x**2+y**2)**(3./2.))  # derivative of h with respect to dy (old)
+
+        # Gradient of h components (new)
+        dh1 = -((dy*x - dx*y)**3*(-dy*x**2 + 3*dx*x*y + 2*dy*y**2))/((x**2 + y**2)**4*np.sqrt(K_appr + (dy*x - dx*y)**4/(x**2 + y**2)**3))  # derivative of h with respect to x (new)
+        dh2 = ((dy*x - dx*y)**3*(2*dx*x**2 + 3*dy*x*y - dx*y**2))/((x**2 + y**2)**4*np.sqrt(K_appr + (dy*x - dx*y)**4/(x**2 + y**2)**3))  # derivative of h with respect to y (new)
+        dh3 = (2*y*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt(K_appr + (dy*x - dx*y)**4/(x**2 + y**2)**3))  # derivative of h with respect to dx (new)
+        dh4 = -(2*x*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt(K_appr + (dy*x - dx*y)**4/(x**2 + y**2)**3))  # derivative of h with respect to dy (new)
+
         # Lie derivatives of h
         Lfh = dh1*f1 + dh2*f2 + dh3*f3 + dh4*f4  # Lie derivative of h with respect to f
         Lgh = np.matmul(np.array([dh1, dh2, dh3, dh4]), G)  # Lie derivatives of g with respect to f 
