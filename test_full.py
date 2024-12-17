@@ -125,14 +125,14 @@ def test(dmp_traj, start, goal, cbfs = True, obst = True):
         obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
         # superquadric parameters
         lmbda = 5.0
-        beta = 2.0
+        beta = 2.5
         eta = 1.0
         obstacles.append(obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
                                 lmbda = lmbda, beta=beta, eta=eta, coeffs = np.ones(dmp_traj.n_dmps)))
     
     if cbfs:
         # CBF PARAMETERS
-        alpha = 200 # extended class-K function parameter (straight line)
+        alpha = 75 # extended class-K function parameter (straight line) 
         exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
         cbf = CBF()
         
