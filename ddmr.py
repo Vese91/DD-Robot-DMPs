@@ -4,7 +4,7 @@ class DDMR(object):
     '''
     Differential-Drive Mobile Robot (DDMR) class.
     '''
-    def __init__(self, state = np.zeros(6), dt = 0.01, m = 0.0, I = 0.0):
+    def __init__(self, state = np.zeros(6), dt = 0.01, m = 0.0, I = 0.0, mode = 'grip'):
         '''
         Constructor for the DDMR class.
         '''
@@ -12,6 +12,7 @@ class DDMR(object):
         self.dt = dt  # time step
         self.m = m  # mass
         self.I = I  # inertia
+        self.mode = mode  # robot mode
 
     def inverse_dynamics(self, vx, omega):
         '''
@@ -26,8 +27,8 @@ class DDMR(object):
             F: driving force
             T: driving torque
         '''
-        F = self.m*vx/self.dt  # driving force
-        T = self.I*omega/self.dt  # driving torque
+        F = self.m * vx / self.dt  # driving force
+        T = self.I * omega / self.dt  # driving torque
         return F, T
 
     def dynamics_step(self, u = np.zeros(2)):
@@ -64,8 +65,8 @@ class DDMR(object):
         vy_critical = 0.001 # critical lateral velocity to switch back to grip state
 
         # Hybrid two-state system
-        mode = 'grip'
-        if mode.lower() == 'grip':
+        # self.mode = 'grip'
+        if self.mode.lower() == 'grip':
             # Grip state
             f = np.array([vx*np.cos(theta), vx*np.sin(theta), omega, 0, 0, 0])  # drift term
             B = np.array([[0,0], [0,0], [0,0], [1/self.m,0], [0,0], [0,1/self.I]])  # control matrix
@@ -81,8 +82,8 @@ class DDMR(object):
             F_cf = self.m*self.state[3]*self.state[5]  # centrifugal force
             F_cp = np.sign(F_cf)*mu_s*self.m*g  # centrifugal force limit (centripetal force)
             if np.abs(F_cf) > np.abs(F_cp):
-                mode = 'slip'  # switch to slip state
-        elif mode.lower() == 'slip':
+                self.mode = 'slip'  # switch to slip state
+        elif self.mode.lower() == 'slip':
             # Slip state
             f = np.array([vx*np.cos(theta)-vy*np.sin(theta), vx*np.sin(theta)+vy*np.cos(theta), omega, vy*omega, -vx*omega, 0])  # drift term
             B = np.array([[0,0,0],[0,0,0],[0,0,0],[1/self.m,0,0],[0,1/self.m,0],[0,0,1/self.I]])  # control matrix
@@ -96,9 +97,9 @@ class DDMR(object):
 
             # Transition condition
             if np.abs(self.state[4]) < vy_critical:
-                mode = 'grip'  # switch to grip state
+                self.mode = 'grip'  # switch to grip state
         
-        return self.state, mode
+        return self.state, self.mode
         
     
     

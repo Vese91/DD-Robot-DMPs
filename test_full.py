@@ -55,7 +55,8 @@ def animate(x_list, obst_centers, obstacle_axis):
 
 
 
-def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis = [], name = 'DMP'):
+def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis = [], name = 'DMP', colour = 'b', lstyle = '-', mu_label = None):
+
     # Centrifugal force
     F_cf = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))
 
@@ -67,35 +68,39 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
 
     # Plot the result
     plt.subplot(2,2,1)
-    plt.plot(x_list[:,0], x_list[:,1],label=name)
-    plt.plot(x_list[0,0], x_list[0,1], 'o',label='x0 ' + name)
-    plt.plot(x_list[-1,0], x_list[-1,1],'x', label='xg ' + name)
+    plt.plot(x_list[:,0], x_list[:,1], color = colour, linestyle = lstyle, label = name, linewidth = 1.8)
+    plt.plot(x_list[0,0], x_list[0,1], 'o')
+    plt.plot(x_list[-1,0], x_list[-1,1],'x')
     # plot a circle for the obstacle
     # plot the enveloping of all the obstacles
     for i in range(len(obstacle_centers)):
-        circle = plt.Circle(obstacle_centers[i], obstacle_axis[0], color='g', fill=False)
+        circle = plt.Circle(obstacle_centers[i], obstacle_axis[0], color = 'r', fill = False)
         plt.gca().add_artist(circle)
-    plt.title('Trajectory')
     plt.legend()
+    plt.xlabel(r'$x$ [m]')
+    plt.ylabel(r'$y$ [m]')
     plt.grid(True)
 
     plt.subplot(2,2,2)
-    plt.plot(F_cf, label='Centrifugal force ' + name)  # centrifugal force
-    plt.axhline(y = mu_s * g, linestyle='--', label='mu_s * g') # static friction (centripetal force)
+    plt.plot(F_cf, color = colour, linestyle = lstyle, label = 'centr. force', linewidth = 1.8)
+    plt.axhline(y = mu_s * g, color = 'r', linestyle = '--', label = mu_label)
     plt.legend()
-    plt.title('Centrifugal force')
+    plt.xlabel(r'$t$ [s]')
+    plt.ylabel(r'$F$ [N]')
     plt.grid(True)
 
     plt.subplot(2,2,3)
-    plt.plot(vx_ref,label = r'$v_x$ ' + name)
+    plt.plot(vx_ref, color = colour, linestyle = lstyle, label = r'$v_x$ ' + name, linewidth = 1.8)
     plt.legend()
-    plt.title(r'Velocity $v_x$')
+    plt.xlabel(r'$t$ [s]')
+    plt.ylabel(r'$v_x$ [m/s]')
     plt.grid(True)
 
     plt.subplot(2,2,4)
-    plt.plot(omega,label = r'$\omega$ ' + name)
+    plt.plot(omega, color = colour, linestyle = lstyle, label = r'$\omega$ ' + name, linewidth = 1.8)
     plt.legend()
-    plt.title(r'Velocity $\omega$')
+    plt.xlabel(r'$t$ [s]')
+    plt.ylabel(r'$\omega$ [rad/s]')
     plt.grid(True)
 
 
@@ -184,6 +189,10 @@ def main():
     ref_path = np.vstack((x,y)).T  # reference path
     ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
+    # Colors list
+    color_list = ['green','blue','darkorange']  # colors list (ref, cbf, no cbf)
+    line_style = ['-','--']  # line style list
+
     # plt.plot(ref_path[:,0], ref_path[:,1],'b-',label='Reference trajectory')
     # plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
     # plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='Goal')
@@ -197,18 +206,20 @@ def main():
                                 alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs
     dmp_traj.imitate_path(x_des=ref_path)  # train the DMPs
     learnt_path, learnt_vel, learnt_acc, _ = dmp_traj.rollout(tau = 1)  # rollout the DMPs
-    plot(learnt_path, learnt_vel, learnt_acc, name = 'training')
+    plot(learnt_path, learnt_vel, learnt_acc, name = 'training', colour = color_list[0], lstyle = line_style[0])
 
     #TEST
+    x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis = test(dmp_traj, start=np.array([-2, 1.5]), goal=np.array([3, -1.0]), cbfs=False, obst=True)  
+    name = "DMP obst"
+    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name, colour = color_list[2], lstyle = line_style[0])
     x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis = test(dmp_traj, start=np.array([-2, 1.5]), goal=np.array([3, -1.0]), cbfs=True, obst=True)
     #plot the result
     name = "DMP obst + cbf"
-    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name)
-    x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis = test(dmp_traj, start=np.array([-2, 1.5]), goal=np.array([3, -1.0]), cbfs=False, obst=True)  
-    name = "DMP obst"
-    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name)
-
+    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name, colour = color_list[1], lstyle = line_style[0], mu_label = r'$\mu_s g$')
+    plt.subplots_adjust(left=0.086, right=0.99, top=0.99)  # trim settings
     plt.show()
 
 if __name__ == "__main__":
     main()
+
+print(">> End of the script")
