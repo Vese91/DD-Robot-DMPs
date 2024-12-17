@@ -68,7 +68,7 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
 
     # Plot the result
     plt.subplot(2,2,1)
-    plt.plot(x_list[:,0], x_list[:,1], color = colour, linestyle = lstyle, label = name, linewidth = 1.8)
+    plt.plot(x_list[:,0], x_list[:,1], color = colour, linestyle = lstyle, label = name, linewidth = 2.0)
     plt.plot(x_list[0,0], x_list[0,1], 'o')
     plt.plot(x_list[-1,0], x_list[-1,1],'x')
     # plot a circle for the obstacle
@@ -76,32 +76,32 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     for i in range(len(obstacle_centers)):
         circle = plt.Circle(obstacle_centers[i], obstacle_axis[0], color = 'r', fill = False)
         plt.gca().add_artist(circle)
-    plt.legend()
-    plt.xlabel(r'$x$ [m]')
-    plt.ylabel(r'$y$ [m]')
-    plt.grid(True)
+    plt.legend(fontsize = 12)
+    plt.xlabel(r'$x$ [m]', fontsize = 15)
+    plt.ylabel(r'$y$ [m]', fontsize = 15)
+    plt.grid(True, linestyle = '--', linewidth = 0.5)
 
     plt.subplot(2,2,2)
-    plt.plot(F_cf, color = colour, linestyle = lstyle, label = 'centr. force', linewidth = 1.8)
+    plt.plot(F_cf, color = colour, linestyle = lstyle, label = r'$F_{cf}$ ' + name, linewidth = 2.0)
     plt.axhline(y = mu_s * g, color = 'r', linestyle = '--', label = mu_label)
-    plt.legend()
-    plt.xlabel(r'$t$ [s]')
-    plt.ylabel(r'$F$ [N]')
-    plt.grid(True)
+    plt.legend(fontsize = 12)
+    plt.xlabel(r'$t$ [s]', fontsize = 15)
+    plt.ylabel(r'$F$ [N]', fontsize = 15)
+    plt.grid(True, linestyle = '--', linewidth = 0.5)
 
     plt.subplot(2,2,3)
-    plt.plot(vx_ref, color = colour, linestyle = lstyle, label = r'$v_x$ ' + name, linewidth = 1.8)
-    plt.legend()
-    plt.xlabel(r'$t$ [s]')
-    plt.ylabel(r'$v_x$ [m/s]')
-    plt.grid(True)
+    plt.plot(vx_ref, color = colour, linestyle = lstyle, label = r'$v_x$ ' + name, linewidth = 2.0)
+    plt.legend(fontsize = 12)
+    plt.xlabel(r'$t$ [s]', fontsize = 15)
+    plt.ylabel(r'$v_x$ [m/s]', fontsize = 15)
+    plt.grid(True, linestyle = '--', linewidth = 0.5)
 
     plt.subplot(2,2,4)
-    plt.plot(omega, color = colour, linestyle = lstyle, label = r'$\omega$ ' + name, linewidth = 1.8)
-    plt.legend()
-    plt.xlabel(r'$t$ [s]')
-    plt.ylabel(r'$\omega$ [rad/s]')
-    plt.grid(True)
+    plt.plot(omega, color = colour, linestyle = lstyle, label = r'$\omega$ ' + name, linewidth = 2.0)
+    plt.legend(fontsize = 12)
+    plt.xlabel(r'$t$ [s]', fontsize = 15)
+    plt.ylabel(r'$\omega$ [rad/s]', fontsize = 15)
+    plt.grid(True, linestyle = '--', linewidth = 0.5)
 
 
 
@@ -215,7 +215,7 @@ def main():
     x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis = test(dmp_traj, start=np.array([-2, 1.5]), goal=np.array([3, -1.0]), cbfs=True, obst=True)
     #plot the result
     name = "DMP obst + cbf"
-    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name, colour = color_list[1], lstyle = line_style[0], mu_label = r'$\mu_s g$')
+    plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name, colour = color_list[1], lstyle = line_style[0], mu_label = r'$\mu_s\,g$')
     plt.subplots_adjust(left=0.086, right=0.99, top=0.99)  # trim settings
     plt.show()
 
