@@ -193,70 +193,115 @@ F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])*
 # No CBF
 rho = np.sqrt(obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
 omega = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0]) / (obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
-vx_ref_nocbf = copy.deepcopy(np.linalg.norm(obs_vel_nocbf, axis=1)) # reference forward velocity (no cbf)
-# vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
+vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
 omega_ref_nocbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
-# With CBFs
-rho = np.sqrt(obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
-omega = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0]) / (obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
-vx_ref_cbf = copy.deepcopy(np.linalg.norm(obs_vel_cbf, axis=1)) # reference forward velocity (no cbf)
-# vx_ref_cbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
-omega_ref_cbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
+# Calculate the tangential orientation angle for the trajectory without CBF
+obs_orient_nocbf = np.arctan2(np.gradient(obs_path_nocbf[:, 1]), np.gradient(obs_path_nocbf[:, 0]))  # orientation angle (no cbf)
+obs_orient_nocbf = np.unwrap(obs_orient_nocbf)  # unwrap the orientation angle (seems correct, check again in case of troubles)
+obs_angvel_nocbf = np.gradient(obs_orient_nocbf) / np.gradient(tVec)  # Calculate the angular velocity for the trajectory without CBF
+
+vref_nocbf = []
+for i in range(len(obs_orient_nocbf)):
+    theta = obs_orient_nocbf[i]
+    A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])
+    b = np.array([obs_vel_nocbf[i,0], obs_vel_nocbf[i,1], obs_angvel_nocbf[i]])
+    vref = np.matmul(A,b)  # reference velocity (shape (2,))
+    vref_nocbf.append(vref)  # reference forward velocity (no cbf)
+
+vref_nocbf = np.array(vref_nocbf)
 
 plt.figure(1)
 plt.subplot(2,1,1)
-plt.plot(tVec,vx_ref_nocbf,'r',linestyle='-',label = r'$v_x$ ref. (no cbf)')
-plt.plot(tVec,vx_ref_cbf,'b',linestyle='-',label = r'$v_x$ ref. (with cbf)')
-plt.legend(loc = 'upper right')
-plt.xlabel('Time [s]')
-plt.ylabel(r'$v_x$ [m/s]')
+plt.plot(tVec,vref_nocbf[:,0],'b',linestyle='-',label = r'$v_x$ (no cbf)')
+plt.legend()
 
 plt.subplot(2,1,2)
-plt.plot(tVec,omega_ref_nocbf,'r',linestyle='-',label = r'$\omega$ ref. (no cbf)')
-plt.plot(tVec,omega_ref_cbf,'b',linestyle='-',label = r'$\omega$ ref. (with cbf)')
-plt.legend(loc = 'upper right')
-plt.xlabel('Time [s]')
-plt.ylabel(r'$\omega$ [rad/s]')
-plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
-# plt.show()
+plt.plot(tVec,vref_nocbf[:,1],'b',linestyle='-',label = r'$\omega$ (no cbf)')
+plt.legend()
+#plt.show()
 
 
-# ROBOT SIMULATION
-# hard coded, but just for the moment, for better bug tracking
-state_rec = []  # state record
-x0 = obs_path_nocbf[0,0]  # initial x position
-y0 = obs_path_nocbf[0,1]  # initial y position
-theta0 = np.arctan2(obs_path_nocbf[1,1] - obs_path_nocbf[0,1] ,obs_path_nocbf[1,0] - obs_path_nocbf[0,0])  # initial orientation
-state_0 = np.array([x0, y0, theta0])  # initial state
-state_rec.append(state_0)  # record the initial state
-dt = 0.01  # time step
-for i in range(1, len(tVec)):
-    # unpack the robot state
-    x = state_0[0]  # x position
-    y = state_0[1]  # y position
-    theta = state_0[2]  # orientation
+def get_ddmr_refvel(tVec, traj, vel):
+    '''
+    Function to calculate the reference velocity for the DDMR
+    
+    Inputs:
+        tVec: time vector (numpy array of shape (N,))
+        traj: trajectory (numpy array of shape (N,2)) 
+        vel: velocity (numpy array of shape (N,2))
 
-    # robot kinematics 
-    u1 = vx_ref_nocbf[i]  # forward velocity (no cbf)
-    u2 = omega_ref_nocbf[i]  # angular velocity (no cbf)
-    state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])  # update the state
-    state_rec.append(state)  # record the state
-    state_0 = copy.deepcopy(state)  # update the initial state
+    Outputs:
+        vx_ref: reference forward velocity
+        omega_ref: reference angular velocity
+    '''
+    # Calculate the tangential orientation and angular velocity
+    orient = np.arctan2(np.gradient(traj[:, 1]), np.gradient(traj[:, 0]))  # orientation angle
+    orient = np.unwrap(orient)  # unwrap the orientation angle (to avoid jumps)
+    angvel = np.gradient(orient) / np.gradient(tVec)  # Calculate the angular velocity
 
-# Convert the list to a numpy array
-state_rec = np.array(state_rec)
+    # Calculate the reference velocity
+    vref = []  # reference velocity list
+    for i in range(len(orient)):
+        theta = orient[i]  # current orientation
+        A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
+        b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
+        vref_i = np.matmul(A,b)  # reference velocity 
+        vref.append(vref_i)  # reference velocity
+
+    # Convert the list to a numpy array
+    vref = np.array(vref)  # reference velocity (shape (N,2))
+    vx_ref = vref[:,0]  # reference forward velocity
+    omega_ref = vref[:,1]  # reference angular velocity
+    return vx_ref, omega_ref
+
+vx_ref, omega_ref = get_ddmr_refvel(tVec, obs_path_nocbf, obs_vel_nocbf)
 
 plt.figure(2)
-# Plot the result
-plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'k--',label='DMP obs. + nocbf', linewidth=1)
-plt.plot(state_rec[:,0], state_rec[:,1],'b-',label='robot path', linewidth=1)
+plt.subplot(2,1,1)
+plt.plot(tVec,vx_ref,'b',linestyle='--',label = r'$v_x$ (no cbf)')
 plt.legend()
-# plt.show()
 
-plt.figure(3)
-plt.plot(state_rec[:,2],'b-',label='robot orient', linewidth=1)
+plt.subplot(2,1,2)
+plt.plot(tVec,omega_ref,'b',linestyle='--',label = r'$\omega$ (no cbf)')
 plt.legend()
 plt.show()
 
 print(">> End of the script")
+# # ROBOT SIMULATION
+# # hard coded, but just for the moment, for better bug tracking
+# state_rec = []  # state record
+# x0 = obs_path_nocbf[0,0]  # initial x position
+# y0 = obs_path_nocbf[0,1]  # initial y position
+# theta0 = np.arctan2(obs_path_nocbf[1,1] - obs_path_nocbf[0,1] ,obs_path_nocbf[1,0] - obs_path_nocbf[0,0])  # initial orientation
+# state_0 = np.array([x0, y0, theta0])  # initial state
+# state_rec.append(state_0)  # record the initial state
+# dt = 0.01  # time step
+# for i in range(1, len(tVec)):
+#     # unpack the robot state
+#     x = state_0[0]  # x position
+#     y = state_0[1]  # y position
+#     theta = state_0[2]  # orientation
+
+#     # robot kinematics 
+#     u1 = vx_ref_nocbf[i]  # forward velocity (no cbf)
+#     u2 = omega_ref_nocbf[i]  # angular velocity (no cbf)
+#     state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])  # update the state
+#     state_rec.append(state)  # record the state
+#     state_0 = copy.deepcopy(state)  # update the initial state
+
+# # Convert the list to a numpy array
+# state_rec = np.array(state_rec)
+
+# plt.figure(2)
+# # Plot the result
+# plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'k--',label='DMP obs. + nocbf', linewidth=1)
+# plt.plot(state_rec[:,0], state_rec[:,1],'b-',label='robot path', linewidth=1)
+# plt.legend()
+# # plt.show()
+
+# plt.figure(3)
+# plt.plot(state_rec[:,2],'b-',label='robot orient', linewidth=1)
+# plt.legend()
+# plt.show()
+
