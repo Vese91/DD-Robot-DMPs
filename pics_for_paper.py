@@ -193,29 +193,32 @@ F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])*
 # No CBF
 rho = np.sqrt(obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
 omega = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0]) / (obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
-vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
+vx_ref_nocbf = copy.deepcopy(np.linalg.norm(obs_vel_nocbf, axis=1)) # reference forward velocity (no cbf)
+# vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
 omega_ref_nocbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
 # With CBFs
 rho = np.sqrt(obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
 omega = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0]) / (obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
-vx_ref_cbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
+vx_ref_cbf = copy.deepcopy(np.linalg.norm(obs_vel_cbf, axis=1)) # reference forward velocity (no cbf)
+# vx_ref_cbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
 omega_ref_cbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
-# plt.subplot(2,1,1)
-# plt.plot(tVec,vx_ref_nocbf,'r',linestyle='-',label = r'$v_x$ ref. (no cbf)')
-# plt.plot(tVec,vx_ref_cbf,'b',linestyle='-',label = r'$v_x$ ref. (with cbf)')
-# plt.legend(loc = 'upper right')
-# plt.xlabel('Time [s]')
-# plt.ylabel(r'$v_x$ [m/s]')
+plt.figure(1)
+plt.subplot(2,1,1)
+plt.plot(tVec,vx_ref_nocbf,'r',linestyle='-',label = r'$v_x$ ref. (no cbf)')
+plt.plot(tVec,vx_ref_cbf,'b',linestyle='-',label = r'$v_x$ ref. (with cbf)')
+plt.legend(loc = 'upper right')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$v_x$ [m/s]')
 
-# plt.subplot(2,1,2)
-# plt.plot(tVec,omega_ref_nocbf,'r',linestyle='-',label = r'$\omega$ ref. (no cbf)')
-# plt.plot(tVec,omega_ref_cbf,'b',linestyle='-',label = r'$\omega$ ref. (with cbf)')
-# plt.legend(loc = 'upper right')
-# plt.xlabel('Time [s]')
-# plt.ylabel(r'$\omega$ [rad/s]')
-# plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
+plt.subplot(2,1,2)
+plt.plot(tVec,omega_ref_nocbf,'r',linestyle='-',label = r'$\omega$ ref. (no cbf)')
+plt.plot(tVec,omega_ref_cbf,'b',linestyle='-',label = r'$\omega$ ref. (with cbf)')
+plt.legend(loc = 'upper right')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$\omega$ [rad/s]')
+plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
 # plt.show()
 
 
@@ -239,14 +242,20 @@ for i in range(1, len(tVec)):
     u2 = omega_ref_nocbf[i]  # angular velocity (no cbf)
     state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])  # update the state
     state_rec.append(state)  # record the state
-    state_0 = state  # update the initial state
+    state_0 = copy.deepcopy(state)  # update the initial state
 
 # Convert the list to a numpy array
 state_rec = np.array(state_rec)
 
+plt.figure(2)
 # Plot the result
 plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'k--',label='DMP obs. + nocbf', linewidth=1)
 plt.plot(state_rec[:,0], state_rec[:,1],'b-',label='robot path', linewidth=1)
+plt.legend()
+# plt.show()
+
+plt.figure(3)
+plt.plot(state_rec[:,2],'b-',label='robot orient', linewidth=1)
 plt.legend()
 plt.show()
 
