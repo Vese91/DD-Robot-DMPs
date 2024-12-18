@@ -192,13 +192,13 @@ F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])*
 # Calculate the robot commands from the Cartesian velocities
 # No CBF
 rho = np.sqrt(obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
-omega = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0]) / rho
+omega = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0]) / (obs_path_nocbf[:,0]**2 + obs_path_nocbf[:,1]**2)
 vx_ref_nocbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
 omega_ref_nocbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
 # With CBFs
 rho = np.sqrt(obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
-omega = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0]) / rho
+omega = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0]) / (obs_path_cbf[:,0]**2 + obs_path_cbf[:,1]**2)
 vx_ref_cbf = copy.deepcopy(rho * omega) # reference forward velocity (no cbf)
 omega_ref_cbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
@@ -220,6 +220,34 @@ omega_ref_cbf = copy.deepcopy(omega) # reference angular velocity (no cbf)
 
 
 # ROBOT SIMULATION
+# hard coded, but just for the moment, for better bug tracking
+state_rec = []  # state record
+x0 = obs_path_nocbf[0,0]  # initial x position
+y0 = obs_path_nocbf[0,1]  # initial y position
+theta0 = np.arctan2(obs_path_nocbf[1,1] - obs_path_nocbf[0,1] ,obs_path_nocbf[1,0] - obs_path_nocbf[0,0])  # initial orientation
+state_0 = np.array([x0, y0, theta0])  # initial state
+state_rec.append(state_0)  # record the initial state
+dt = 0.01  # time step
+for i in range(1, len(tVec)):
+    # unpack the robot state
+    x = state_0[0]  # x position
+    y = state_0[1]  # y position
+    theta = state_0[2]  # orientation
 
+    # robot kinematics 
+    u1 = vx_ref_nocbf[i]  # forward velocity (no cbf)
+    u2 = omega_ref_nocbf[i]  # angular velocity (no cbf)
+    state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])  # update the state
+    state_rec.append(state)  # record the state
+    state_0 = state  # update the initial state
+
+# Convert the list to a numpy array
+state_rec = np.array(state_rec)
+
+# Plot the result
+plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'k--',label='DMP obs. + nocbf', linewidth=1)
+plt.plot(state_rec[:,0], state_rec[:,1],'b-',label='robot path', linewidth=1)
+plt.legend()
+plt.show()
 
 print(">> End of the script")
