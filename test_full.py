@@ -62,7 +62,7 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
 
     # Calculate robot's commands from the Cartesian velocities
     rho = np.sqrt(x_list[:,0]**2 + x_list[:,1]**2)
-    omega = (x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0]) / rho
+    omega = (x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])/(x_list[:,0]**2 + x_list[:,1]**2)
     vx_ref = rho * omega # reference forward velocity
     omega_ref = omega # reference angular velocity
 
@@ -97,7 +97,7 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     plt.grid(True, linestyle = '--', linewidth = 0.5)
 
     plt.subplot(2,2,4)
-    plt.plot(omega, color = colour, linestyle = lstyle, label = r'$\omega$ ' + name, linewidth = 2.0)
+    plt.plot(omega_ref, color = colour, linestyle = lstyle, label = r'$\omega$ ' + name, linewidth = 2.0)
     plt.legend(fontsize = 12)
     plt.xlabel(r'$t$ [s]', fontsize = 15)
     plt.ylabel(r'$\omega$ [rad/s]', fontsize = 15)
@@ -216,7 +216,7 @@ def main():
     #plot the result
     name = "DMP obst + cbf"
     plot(x_list, x_dot_list, x_ddot_list, obst_centers, obst_axis, name = name, colour = color_list[1], lstyle = line_style[0], mu_label = r'$\mu_s\,g$')
-    plt.subplots_adjust(left=0.086, right=0.99, top=0.99)  # trim settings
+    plt.subplots_adjust(left = 0.086, right = 0.99, top = 0.99)  # trim settings
     plt.show()
 
 if __name__ == "__main__":
