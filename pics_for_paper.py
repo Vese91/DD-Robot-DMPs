@@ -16,6 +16,7 @@ CBFs are used to ensure safety in the system, while DMPs are used to generate sm
 
 # Dynamic parameters
 mu_s = 0.7  # static friction coefficient
+mu_d = 0.56  # dynamic friction coefficient (80% of static friction)
 g = 9.81 # gravity acceleration [m/s^2]
 alpha = 50 # extended class-K function parameter (straight line)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
@@ -219,7 +220,10 @@ def get_ddmr_refinputs(tVec, traj, vel, dt = 0.01, mass = 1.0, inertia = 0.1, in
         return 0,0
 
 # Get the reference inputs for the DDMR
-vx_ref, omega_ref = get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf, dt = 0.01, mass = 1.0, inertia = 0.1, input_type = 'force')
+m = 1.0  # mass [kg]
+robot_radius = 0.105  # robot radius [m]
+Ir = (m * robot_radius**2) / 2  # inertia [kg*m^2]
+vx_ref, omega_ref = get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf, dt = 0.01, mass = m, inertia = Ir, input_type = 'velocity')
 
 plt.figure(1)
 plt.subplot(2,1,1)
@@ -229,53 +233,89 @@ plt.legend()
 plt.subplot(2,1,2)
 plt.plot(tVec,omega_ref,'b',linestyle='-',label = r'$T_{ref}$ (no cbf)')
 plt.legend()
-plt.show()
 
 # ROBOT SIMULATION
 # hard coded, but just for the moment, for better bug tracking
 state_rec = []  # state record
 x0 = obs_path_nocbf[0,0]  # initial x position
 y0 = obs_path_nocbf[0,1]  # initial y position
-theta0 = np.arctan2(obs_path_nocbf[1,1] - obs_path_nocbf[0,1] ,obs_path_nocbf[1,0] - obs_path_nocbf[0,0])  # initial orientation
-state_0 = np.array([x0, y0, theta0, 0.0, 0.0, 0.0])  # initial state
+theta0 = 1.589 # default (np.pi/2) # initial orientation
+state_0 = np.array([x0, y0, theta0])  # initial state
+vx_in = 0.0 # initial forward velocity
+vy_in = 0.0 # initial lateral velocity
+vy_critical = 0.001 # critical lateral velocity to switch back to grip state
+omega_in = 0.0 # initial angular velocity
+mode = 'grip'  # initial mode
 state_rec.append(state_0)  # record the initial state
 dt = 0.01  # time step
 for i in range(1,len(tVec)):
-    # unpack the robot state
-    x = state_0[0]  # x position
-    y = state_0[1]  # y position
-    theta = state_0[2]  # orientation
-    vx = state_0[3]  # forward velocity
-    vy = state_0[4]  # lateral velocity
-    omega = state_0[5]  # angular velocity
+    if mode == 'grip':
+        # Solve grip dynamics
 
-    # robot kinematics 
-    u1 = F_ref[i]  # forward velocity (no cbf)
-    u2 = T_ref[i]  # angular velocity (no cbf)
+        # Unpack the robot state
+        x = state_0[0]  # x position
+        y = state_0[1]  # y position
+        theta = state_0[2]  # orientation
+
+        # Input velocities
+        vx_in = vx_ref[i]  # forward velocity (no cbf)
+        omega_in = omega_ref[i]  # angular velocity (no cbf)
+
+        # State update
+        state = state_0 + dt * np.array([vx_in*np.cos(theta), vx_in*np.sin(theta), omega_in])
+
+        # Record the state and update for next iteration
+        state_rec.append(state)  # record the state
+        state_0 = copy.deepcopy(state)  # update the initial state
+        if vx_in * omega_in > mu_s * g:
+            mode = 'slip'
+
+    elif mode == 'slip':
+        # Solve slip dynamics
+
+        # Unpack the robot state
+        x = state_0[0]
+        y = state_0[1]
+        theta = state_0[2]
+
+        # Input velocities
+        vx_in = vx_ref[i]
+        vy_in = vy_in + dt * (-vx_ref[i] * omega_ref[i] - np.sign(vy_in)*mu_d*g)
+        omega_in = omega_ref[i]
+
+        # State update
+        state = state_0 + dt*np.array([vx_in*np.cos(theta)-vy_in*np.sin(theta), vx_in*np.sin(theta)+vy_in*np.cos(theta), omega_in])
+
+        # Record the state and update for next iteration
+        state_rec.append(state)
+        state_0 = copy.deepcopy(state)
+        if np.abs(vy_in) < vy_critical:
+            mode = 'grip'
     
-    # dynamics
-    f = np.array([vx*np.cos(theta), vx*np.sin(theta), omega, 0.0, 0.0, 0.0])  # state dynamics
-
-
-    state_rec.append(state)  # record the state
-    state_0 = copy.deepcopy(state)  # update the initial state
-
 # Convert the list to a numpy array
 state_rec = np.array(state_rec)
+    
 
 
-# Plot the linear force and torque
-# plt.figure(3)
-# plt.subplot(2,1,1)
-# plt.plot(tVec, linear_force, 'r', linestyle='-', label='Linear Force')
-# plt.ylabel('Force [N]')
-# plt.legend()
 
-# plt.subplot(2,1,2)
-# plt.plot(tVec, torque, 'r', linestyle='-', label='Torque')
-# plt.xlabel('Time [s]')
-# plt.ylabel('Torque [Nm]')
-# plt.legend()
+# for i in range(1,len(tVec)):
+#     # Unpack the robot state
+#     x = state_0[0]  # x position
+#     y = state_0[1]  # y position
+#     theta = state_0[2]  # orientation
+
+#     # Robot kinematics 
+#     u1 = vx_ref[i]  # forward velocity (no cbf)
+#     u2 = omega_ref[i]  # angular velocity (no cbf)
+    
+#     # Dynamics
+#     state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])
+
+#     state_rec.append(state)  # record the state
+#     state_0 = copy.deepcopy(state)  # update the initial state
+
+# # Convert the list to a numpy array
+# state_rec = np.array(state_rec)
 
 # plt.figure(2)
 # # Plot the result
