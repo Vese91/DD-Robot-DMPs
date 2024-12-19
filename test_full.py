@@ -47,10 +47,68 @@ def animate(x_list, obst_centers, obstacle_axis):
 
 
 
+def get_ddmr_refinputs(tVec, traj, vel, dt = 0.01, mass = 1.0, inertia = 0.1, input_type = 'velocity'):
+    '''
+    Function to calculate the reference velocity for the DDMR
+    
+    Inputs:
+        tVec: time vector (numpy array of shape (N,))
+        traj: trajectory (numpy array of shape (N,2)) 
+        vel: velocity (numpy array of shape (N,2))
 
+    Outputs:
+        vx_ref: reference forward velocity
+        omega_ref: reference angular velocity
+    '''
+    # Calculate the tangential orientation and angular velocity
+    orient = np.arctan2(np.gradient(traj[:, 1]), np.gradient(traj[:, 0]))  # orientation angle
+    orient = np.unwrap(orient)  # unwrap the orientation angle (to avoid jumps)
+    angvel = np.gradient(orient) / np.gradient(tVec)  # Calculate the angular velocity
 
+    if input_type == 'velocity':
+        vref = []  # reference velocity list
+        for i in range(len(orient)):
+            theta = orient[i]  # current orientation
+            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
+            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
+            vref_i = np.matmul(A,b)  # reference velocity
+            vref.append(vref_i)  # reference velocity
+        
+        # Convert the list to a numpy array
+        vref = np.array(vref)  # reference velocity (shape (N,2))
+        vx_ref = vref[:,0]  # reference forward velocity
+        omega_ref = vref[:,1]  # reference angular velocity
 
+        return vx_ref, omega_ref
+    
+    elif input_type == 'force':
+        vref = []  # reference velocity list
+        for i in range(len(orient)):
+            theta = orient[i]
+            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
+            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
+            vref_i = np.matmul(A,b)  # reference velocity
+            vref.append(vref_i)  # reference velocity
+        
+        # Convert the list to a numpy array
+        vref = np.array(vref)  # reference velocity (shape (N,2))
+        vx_ref = vref[:,0]  # reference forward velocity
+        omega_ref = vref[:,1]  # reference angular velocity
 
+        # Calculate the linear acceleration and angular acceleration
+        linear_acc = np.gradient(vx_ref) / dt
+        angular_acc = np.gradient(omega_ref) / dt
+
+        # Calculate the linear force and torque
+        F_ref = mass * linear_acc
+        T_ref = inertia * angular_acc
+
+        return F_ref, T_ref
+    
+    else:
+        raise ValueError('Invalid input type')
+
+        return 0,0
 
 
 
