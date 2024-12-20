@@ -26,7 +26,7 @@ class DDMR(object):
         Function to calculate the reference velocity for the DDMR.
         
         Inputs:
-            tVec: time vector (numpy array of shape (N,))
+            tVec: time vector, the final time has to be the final time of DMPs (numpy array of shape (N,))
             traj: trajectory (numpy array of shape (N,2)) 
             vel: velocity (numpy array of shape (N,2))
             
@@ -53,6 +53,35 @@ class DDMR(object):
         omega_ref = vref[:,1]  # reference angular velocity
 
         return vx_ref, omega_ref
+    
+    def forward_kinematics(self, u = np.zeros(2)):
+        '''
+        Function to calculate the forward kinematics of the DDMR.
+
+        Inputs:
+            self: object
+            u: control input (vx, omega)
+        
+        Outputs:
+            x_dot: x velocity
+            y_dot: y velocity
+            theta_dot: angular velocity
+        '''
+        # Unpack the state
+        x = self.state[0]  # x position
+        y = self.state[1]  # y position
+        theta = self.state[2]  # orientation
+
+        # Unpack the control input
+        vx = u[0]  # forward velocity
+        omega = u[1]  # angular velocity
+
+        # Calculate the forward kinematics
+        x_dot = vx * np.cos(theta)  # x velocity
+        y_dot = vx * np.sin(theta)  # y velocity
+        theta_dot = omega  # angular velocity
+
+        return x_dot, y_dot, theta_dot
     
     def dynamics_step(self, dt = 0.01, u = np.zeros(2)):
         '''
@@ -81,7 +110,16 @@ class DDMR(object):
             # Update the state
             state_0 = np.array([x,y,theta]) # current state
             self.state = state_0 + dt*np.array([vx_in * np.cos(theta), vx_in * np.sin(theta), omega_in])  # explicit Euler integration
-            if abs(vx_in*omega_in) > self.mu_s*self.g:
+
+            # Constraint calculation
+            x = self.state[0]  # x position (after integration)
+            y = self.state[1]  # y position (after integration)
+            dx,dy,_ = self.forward_kinematics(u)  # forward kinematics
+            rho = np.sqrt(x**2+y**2) # distance to the origin
+            omega = (x*dy-y*dx) / (x**2+y**2)  # angular velocity
+
+            # Constraint check: hr(x)>=0 -> rho*omega^2 <= mu_s*g
+            if rho*omega**2 > self.mu_s*self.g:  
                 self.mode = 'slip'
 
             return self.state, self.mode
