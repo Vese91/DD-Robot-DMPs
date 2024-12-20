@@ -160,6 +160,11 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     plt.ylabel(r'$\omega$ [rad/s]', fontsize = 15)
     plt.grid(True, linestyle = '--', linewidth = 0.5)
 
+    # plt.figure()
+    # plt.plot(F_cf, color = colour, linestyle = lstyle, label = r'$F_{cf}$ ' + name, linewidth = 2.0)
+    # plt.plot(vx_ref * omega_ref, color = 'g', linestyle = lstyle, label = r'$v_x \omega$ ' + name, linewidth = 2.0)
+    # plt.legend(fontsize = 12)
+
 
 
 

@@ -6,6 +6,7 @@ from dmp import dmp
 import bezier_interp as bz
 from dmp import dmp, obstacle_superquadric as obs
 from cbf import CBF
+from ddmr import DDMR
 
 '''
 CBFs = Control Barrier Functions
@@ -150,180 +151,49 @@ tVec = np.linspace(0,t[-1],len(obs_path_nocbf))
 F_nocbf = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0])**2 / (obs_path_nocbf[:,0]**2+obs_path_nocbf[:,1]**2)**(3/2)  # (x*dy-y*dx)^2/(x^2+y^2)^(3/2)
 F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])**2 / (obs_path_cbf[:,0]**2+obs_path_cbf[:,1]**2)**(3/2)
 
-def get_ddmr_refinputs(tVec, traj, vel, dt = 0.01, mass = 1.0, inertia = 0.1, input_type = 'velocity'):
-    '''
-    Function to calculate the reference velocity for the DDMR
-    
-    Inputs:
-        tVec: time vector (numpy array of shape (N,))
-        traj: trajectory (numpy array of shape (N,2)) 
-        vel: velocity (numpy array of shape (N,2))
-        dt: time step
-        mass: mass of the robot
-        inertia: inertia of the robot
-        input_type: type of input ('velocity' or 'force')
-        
-    Outputs:
-        vx_ref: reference forward velocity
-        omega_ref: reference angular velocity
-        F_ref: reference linear force
-        T_ref: reference torque
-    '''
-    # Calculate the tangential orientation and angular velocity
-    orient = np.arctan2(np.gradient(traj[:, 1]), np.gradient(traj[:, 0]))  # orientation angle
-    orient = np.unwrap(orient)  # unwrap the orientation angle (to avoid jumps)
-    angvel = np.gradient(orient) / np.gradient(tVec)  # Calculate the angular velocity
-
-    if input_type == 'velocity':
-        vref = []  # reference velocity list
-        for i in range(len(orient)):
-            theta = orient[i]  # current orientation
-            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
-            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
-            vref_i = np.matmul(A,b)  # reference velocity
-            vref.append(vref_i)  # reference velocity
-        
-        # Convert the list to a numpy array
-        vref = np.array(vref)  # reference velocity (shape (N,2))
-        vx_ref = vref[:,0]  # reference forward velocity
-        omega_ref = vref[:,1]  # reference angular velocity
-
-        return vx_ref, omega_ref
-    
-    elif input_type == 'force':
-        vref = []  # reference velocity list
-        for i in range(len(orient)):
-            theta = orient[i]
-            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
-            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
-            vref_i = np.matmul(A,b)  # reference velocity
-            vref.append(vref_i)  # reference velocity
-        
-        # Convert the list to a numpy array
-        vref = np.array(vref)  # reference velocity (shape (N,2))
-        vx_ref = vref[:,0]  # reference forward velocity
-        omega_ref = vref[:,1]  # reference angular velocity
-
-        # Calculate the linear acceleration and angular acceleration
-        linear_acc = np.gradient(vx_ref) / dt
-        angular_acc = np.gradient(omega_ref) / dt
-
-        # Calculate the linear force and torque
-        F_ref = mass * linear_acc
-        T_ref = inertia * angular_acc
-
-        return F_ref, T_ref
-    
-    else:
-        raise ValueError('Invalid input type')
-
-        return 0,0
-
 # Get the reference inputs for the DDMR
-m = 1.0  # mass [kg]
-robot_radius = 0.105  # robot radius [m]
-Ir = (m * robot_radius**2) / 2  # inertia [kg*m^2]
-vx_ref, omega_ref = get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf, dt = 0.01, mass = m, inertia = Ir, input_type = 'velocity')
+vx_ref, omega_ref = DDMR.get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf)
 
-plt.figure(1)
+plt.figure()
 plt.subplot(2,1,1)
-plt.plot(tVec,vx_ref,'b',linestyle='-',label = r'$F_{ref}$ (no cbf)')
+plt.plot(tVec,vx_ref,'b',linestyle = '-',label = r'$vx_{ref}$ (no cbf)')
 plt.legend()
 
 plt.subplot(2,1,2)
-plt.plot(tVec,omega_ref,'b',linestyle='-',label = r'$T_{ref}$ (no cbf)')
+plt.plot(tVec,omega_ref,'b',linestyle = '-',label = r'$\omega_{ref}$ (no cbf)')
+plt.plot()
 plt.legend()
 
+
 # ROBOT SIMULATION
-# hard coded, but just for the moment, for better bug tracking
-state_rec = []  # state record
-x0 = obs_path_nocbf[0,0]  # initial x position
-y0 = obs_path_nocbf[0,1]  # initial y position
-theta0 = 1.589 # default (np.pi/2) # initial orientation
-state_0 = np.array([x0, y0, theta0])  # initial state
-vx_in = 0.0 # initial forward velocity
-vy_in = 0.0 # initial lateral velocity
-vy_critical = 0.001 # critical lateral velocity to switch back to grip state
-omega_in = 0.0 # initial angular velocity
-mode = 'grip'  # initial mode
-state_rec.append(state_0)  # record the initial state
-dt = 0.01  # time step
+mobile_robot = DDMR()  # robot initialization
+init_state = np.array([obs_path_nocbf[0,0], obs_path_nocbf[0,1], 1.589])  # initial state
+mobile_robot.set_state(state = init_state)  # set the initial state
+state_rec = []  # state record list
+state_rec.append(init_state)  # record the initial state
+mode_rec = []  # mode record list
+mode_rec.append('grip')  # record the initial mode
 for i in range(1,len(tVec)):
-    if mode == 'grip':
-        # Solve grip dynamics
+    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref[i], omega_ref[i]]))  # perform a dynamics step
+    state_rec.append(state)  # record the state
+    mode_rec.append(mode)  # record the mode
 
-        # Unpack the robot state
-        x = state_0[0]  # x position
-        y = state_0[1]  # y position
-        theta = state_0[2]  # orientation
+state_rec = np.array(state_rec)  # convert the list to a numpy array
+mode_rec = np.array(mode_rec)  # convert the list to a numpy array
 
-        # Input velocities
-        vx_in = vx_ref[i]  # forward velocity (no cbf)
-        omega_in = omega_ref[i]  # angular velocity (no cbf)
+plt.figure()
+plt.plot(state_rec[:,0],state_rec[:,1],'b-',label = 'robot path (no cbf)')
+plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'k--',label = 'DMP obs. + nocbf')
+plt.legend()
 
-        # State update
-        state = state_0 + dt * np.array([vx_in*np.cos(theta), vx_in*np.sin(theta), omega_in])
+plt.figure()
+plt.plot(tVec,state_rec[:,2],'b-',label = 'orient (no cbf)')
+plt.legend()
 
-        # Record the state and update for next iteration
-        state_rec.append(state)  # record the state
-        state_0 = copy.deepcopy(state)  # update the initial state
-        if vx_in * omega_in > mu_s * g:
-            mode = 'slip'
-
-    elif mode == 'slip':
-        # Solve slip dynamics
-
-        # Unpack the robot state
-        x = state_0[0]
-        y = state_0[1]
-        theta = state_0[2]
-
-        # Input velocities
-        vx_in = vx_ref[i]
-        vy_in = vy_in + dt * (-vx_ref[i] * omega_ref[i] - np.sign(vy_in)*mu_d*g)
-        omega_in = omega_ref[i]
-
-        # State update
-        state = state_0 + dt*np.array([vx_in*np.cos(theta)-vy_in*np.sin(theta), vx_in*np.sin(theta)+vy_in*np.cos(theta), omega_in])
-
-        # Record the state and update for next iteration
-        state_rec.append(state)
-        state_0 = copy.deepcopy(state)
-        if np.abs(vy_in) < vy_critical:
-            mode = 'grip'
-    
-# Convert the list to a numpy array
-state_rec = np.array(state_rec)
-    
-
-
-
-# for i in range(1,len(tVec)):
-#     # Unpack the robot state
-#     x = state_0[0]  # x position
-#     y = state_0[1]  # y position
-#     theta = state_0[2]  # orientation
-
-#     # Robot kinematics 
-#     u1 = vx_ref[i]  # forward velocity (no cbf)
-#     u2 = omega_ref[i]  # angular velocity (no cbf)
-    
-#     # Dynamics
-#     state = state_0 + dt * np.array([u1*np.cos(theta), u1*np.sin(theta), u2])
-
-#     state_rec.append(state)  # record the state
-#     state_0 = copy.deepcopy(state)  # update the initial state
-
-# # Convert the list to a numpy array
-# state_rec = np.array(state_rec)
-
-# plt.figure(2)
-# # Plot the result
-# plt.plot(obs_path_nocbf[:,0], obs_path_nocbf[:,1],'k--',label='DMP obs. + nocbf', linewidth=1)
-# plt.plot(state_rec[:,0], state_rec[:,1],'b-',label='robot path', linewidth=1)
-# plt.legend()
-
-
+plt.figure()
+plt.plot(tVec,mode_rec,'b-',label = 'mode (no cbf)')
+plt.legend()
 
 plt.show()
 print(">> End of the script")
+

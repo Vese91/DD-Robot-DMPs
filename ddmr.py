@@ -4,104 +4,106 @@ class DDMR(object):
     '''
     Differential-Drive Mobile Robot (DDMR) class.
     '''
-    def __init__(self, state = np.zeros(6), dt = 0.01, m = 0.0, I = 0.0, mode = 'grip'):
+    def __init__(self, state = np.zeros(6), mode = 'grip', vy_in = 0.0, mu_s = 0.70, mu_d = 0.56, g = 9.81):
         '''
-        Constructor for the DDMR class.
+        Class constructor.
         '''
-        self.state = state  # robot state
-        self.dt = dt  # time step
-        self.m = m  # mass
-        self.I = I  # inertia
-        self.mode = mode  # robot mode
+        self.state = state  # robot state (x,y,theta,vx,vy,w)
+        self.mode = mode  # robot mode (grip, slip)
+        self.vy_in = vy_in  # robot lateral velocity 
+        self.mu_s = mu_s  # static friction coefficient
+        self.mu_d = mu_d  # dynamic friction coefficient
+        self.g = g  # gravity constant [m/s^2]
 
-    def inverse_dynamics(self, vx, omega):
+    def set_state(self, state):
         '''
-        Calculate the control input using the inverse dynamics.
+        Set robot state
+        '''
+        self.state = state
+
+    def get_ddmr_refinputs(tVec, traj, vel):
+        '''
+        Function to calculate the reference velocity for the DDMR.
+        
+        Inputs:
+            tVec: time vector (numpy array of shape (N,))
+            traj: trajectory (numpy array of shape (N,2)) 
+            vel: velocity (numpy array of shape (N,2))
+            
+        Outputs:
+            vx_ref: reference forward velocity
+            omega_ref: reference angular velocity
+        '''
+        # Calculate the tangential orientation and angular velocity
+        orient = np.arctan2(np.gradient(traj[:, 1]), np.gradient(traj[:, 0]))  # orientation angle
+        orient = np.unwrap(orient)  # unwrap the orientation angle (to avoid jumps)
+        angvel = np.gradient(orient) / np.gradient(tVec)  # Calculate the angular velocity
+
+        vref = []  # reference velocity list
+        for i in range(len(orient)):
+            theta = orient[i]  # current orientation
+            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
+            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
+            vref_i = np.matmul(A,b)  # reference velocity
+            vref.append(vref_i)  # reference velocity
+            
+        # Convert the list to a numpy array
+        vref = np.array(vref)  # reference velocity (shape (N,2))
+        vx_ref = vref[:,0]  # reference forward velocity
+        omega_ref = vref[:,1]  # reference angular velocity
+
+        return vx_ref, omega_ref
+    
+    def dynamics_step(self, dt = 0.01, u = np.zeros(2)):
+        '''
+        Function to perform a dynamics step.
 
         Inputs:
-            self: class object (state, time-step, mass, inertia)
-            vx: forward velocity (reference)
-            omega: angular velocity (reference)
-
-        Outputs:
-            F: driving force
-            T: driving torque
-        '''
-        F = self.m * vx / self.dt  # driving force
-        T = self.I * omega / self.dt  # driving torque
-        return F, T
-
-    def dynamics_step(self, u = np.zeros(2)):
-        '''
-        Calculate the next state of the robot using the dynamics.
-
-        Inputs:
-            self: class object (state, time-step, mass, inertia)
-            u: control input (driving force, driving torque)
+            self: object
+            dt: time step
+            u: control input (vx, omega)
         
         Outputs:
-            state: next state of the robot
-            mode: current mode of the robot (grip or slip)
+            state: updated state
+            mode: updated mode
         '''
-        # Unpack the state
-        x = self.state[0]  # x position
-        y = self.state[1]  # y position
-        theta = self.state[2]  # orientation
-        vx = self.state[3]  # forward velocity
-        vy = self.state[4]  # lateral velocity
-        omega = self.state[5]  # angular velocity
-        state_0 = np.array([x, y, theta, vx, vy, omega])  # current state
+        vy_critical = 0.001  # critical slip velocity
+        if self.mode == 'grip':
+            # Unpack the state
+            x = self.state[0]  # x position
+            y = self.state[1]  # y position
+            theta = self.state[2]  # orientation
 
-        # Unpack the control input
-        F = u[0]  # driving force
-        T = u[1]  # driving torque
+            # Unpack the control input
+            vx_in = u[0]  # forward velocity
+            omega_in = u[1]  # angular velocity
+
+            # Update the state
+            state_0 = np.array([x,y,theta]) # current state
+            self.state = state_0 + dt*np.array([vx_in * np.cos(theta), vx_in * np.sin(theta), omega_in])  # explicit Euler integration
+            if abs(vx_in*omega_in) > self.mu_s*self.g:
+                self.mode = 'slip'
+
+            return self.state, self.mode
         
-        # Friction coefficients
-        crr = 0.08  # rolling resistance coefficient
-        srr = 0.05  # steering resistance coefficient
-        mu_s = 0.70  # static friction coefficient
-        mu_d = 0.56  # dynamic friction coefficient (80% of static friction)
-        g = 9.81  # gravity acceleration [m/s^2]
-        vy_critical = 0.001 # critical lateral velocity to switch back to grip state
+        elif self.mode == 'slip':
+            # Unpack the state
+            x = self.state[0]  # x position
+            y = self.state[1]  # y position
+            theta = self.state[2]  # orientation
 
-        # Hybrid two-state system
-        # self.mode = 'grip'
-        if self.mode.lower() == 'grip':
-            # Grip state
-            f = np.array([vx*np.cos(theta), vx*np.sin(theta), omega, 0, 0, 0])  # drift term
-            B = np.array([[0,0], [0,0], [0,0], [1/self.m,0], [0,0], [0,1/self.I]])  # control matrix
-            F_roll = np.sign(vx)*crr*self.m*g  # rolling resistance force
-            T_roll = np.sign(omega)*srr*self.I  # steering resistance torque
+            # Input velocities
+            vx_in = u[0]  # forward velocity
+            omega_in = u[1]  # angular velocity
+            self.vy_in = self.vy_in + dt * (-vx_in * omega_in - np.sign(self.vy_in)*self.mu_d*self.g)  # slip velocity
+            
+            # Update the state
+            state_0 = np.array([x,y,theta])  # current state
+            self.state = state_0 + dt*np.array([vx_in*np.cos(theta)-self.vy_in*np.sin(theta), vx_in*np.sin(theta)+self.vy_in*np.cos(theta), omega_in])  # explicit Euler integration
+            if np.abs(self.vy_in) < vy_critical:
+                self.mode = 'grip'
 
-            # Dynamic step
-            u_effective = np.array([F-F_roll, T-T_roll])  # rolling resistance input
-            self.state = state_0 + self.dt*(f + np.matmul(B, u_effective))  # state update
-            self.state[4] = 0 # lateral velocity reset (it avoids unwanted lateral drift)
+            return self.state, self.mode
 
-            # Transition condition
-            F_cf = self.m*self.state[3]*self.state[5]  # centrifugal force
-            F_cp = np.sign(F_cf)*mu_s*self.m*g  # centrifugal force limit (centripetal force)
-            if np.abs(F_cf) > np.abs(F_cp):
-                self.mode = 'slip'  # switch to slip state
-        elif self.mode.lower() == 'slip':
-            # Slip state
-            f = np.array([vx*np.cos(theta)-vy*np.sin(theta), vx*np.sin(theta)+vy*np.cos(theta), omega, vy*omega, -vx*omega, 0])  # drift term
-            B = np.array([[0,0,0],[0,0,0],[0,0,0],[1/self.m,0,0],[0,1/self.m,0],[0,0,1/self.I]])  # control matrix
-            F_roll = np.sign(vx)*crr*self.m*g  # rolling resistance force
-            T_roll = np.sign(omega)*srr*self.I  # steering resistance torque
-            F_lat = -np.sign(vy)*mu_d*self.m*g  # lateral friction force
-
-            # Dynamic step
-            u_effective = np.array([F-F_roll, F_lat, T-T_roll])  # rolling resistance input
-            self.state = state_0 + self.dt*(f + np.matmul(B, u_effective))
-
-            # Transition condition
-            if np.abs(self.state[4]) < vy_critical:
-                self.mode = 'grip'  # switch to grip state
         
-        return self.state, self.mode
-        
-    
-    
-    
         
