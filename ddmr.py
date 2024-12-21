@@ -116,7 +116,7 @@ class DDMR(object):
             y = self.state[1]  # y position (after integration)
             dx,dy,_ = self.forward_kinematics(u)  # forward kinematics
             rho = np.sqrt(x**2+y**2) # distance to the origin
-            omega = (x*dy-y*dx) / (x**2+y**2)  # angular velocity
+            omega = (x*dy-y*dx)/(x**2+y**2)  # angular velocity
 
             # Constraint check: hr(x)>=0 -> rho*omega^2 <= mu_s*g
             if rho*omega**2 > self.mu_s*self.g:  
@@ -142,6 +142,3 @@ class DDMR(object):
                 self.mode = 'grip'
 
             return self.state, self.mode
-
-        
-        

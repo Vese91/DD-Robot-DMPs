@@ -34,13 +34,6 @@ dy = a1*np.cos(t)  # dy
 ref_path = np.vstack((x,y)).T  # reference path
 ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
-# plt.plot(ref_path[:,0], ref_path[:,1],'b-',label='Reference trajectory')
-# plt.plot(ref_path[0,0], ref_path[0,1],'ko',label='Start')
-# plt.plot(ref_path[-1,0], ref_path[-1,1],'kx',label='Goal')
-# plt.title('Ref. training trajectory')
-# plt.legend()
-# plt.show()
-
 # DMPs training
 n_bfs = 100  # number of basis functions
 dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 115, dt = 0.01, T = t[-1],
@@ -94,19 +87,6 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
-# Plot the result
-# plt.plot(learnt_path[:,0], learnt_path[:,1],'r--',label='reference traj.')
-# plt.plot(x_list[:,0], x_list[:,1],'b-',label='executed traj. (no cbf)')
-# plt.plot(x_list[0,0], x_list[0,1],'go',label='start')
-# plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='goal')
-# circle = plt.Circle(obstacle_center, obstacle_axis[0], color='g', fill=False)  # plot a circle for the obstacle
-# plt.gca().add_artist(circle)
-# plt.xlabel('x [m]')
-# plt.ylabel('y [m]')
-# plt.legend()
-# plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
-# plt.show()
-
 # Save the learnt trajectory for the next part
 obs_path_nocbf = copy.deepcopy(x_list)
 obs_vel_nocbf = copy.deepcopy(x_dot_list)
@@ -129,19 +109,6 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
 
-# Plot the result
-# plt.plot(learnt_path[:,0], learnt_path[:,1],'r--',label='reference traj.')
-# plt.plot(x_list[:,0], x_list[:,1],'b-',label='executed traj. (with cbf)')
-# plt.plot(x_list[0,0], x_list[0,1],'go',label='start')
-# plt.plot(x_list[-1,0], x_list[-1,1],'rx',label='goal')
-# circle = plt.Circle(obstacle_center, obstacle_axis[0], color='g', fill=False)  # plot a circle for the obstacle
-# plt.gca().add_artist(circle)
-# plt.xlabel('x [m]')
-# plt.ylabel('y [m]')
-# plt.legend()
-# plt.subplots_adjust(left=0.086, right=0.99, top=0.99)
-# plt.show()
-
 # Save the learnt trajectory for the next part
 obs_path_cbf = copy.deepcopy(x_list)
 obs_vel_cbf = copy.deepcopy(x_dot_list)
@@ -151,21 +118,28 @@ tVec = np.linspace(0,t[-1],len(obs_path_nocbf))
 F_nocbf = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0])**2 / (obs_path_nocbf[:,0]**2+obs_path_nocbf[:,1]**2)**(3/2)  # (x*dy-y*dx)^2/(x^2+y^2)^(3/2)
 F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])**2 / (obs_path_cbf[:,0]**2+obs_path_cbf[:,1]**2)**(3/2)
 
+# ROBOT SIMULATION
+#
 # Get the reference inputs for the DDMR
-vx_ref, omega_ref = DDMR.get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf)
+vx_ref_nocbf, omega_ref_nocbf = DDMR.get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf)
+vx_ref_cbf, omega_ref_cbf = DDMR.get_ddmr_refinputs(tVec, obs_path_cbf, obs_vel_cbf)
 
 plt.figure()
 plt.subplot(2,1,1)
-plt.plot(tVec,vx_ref,'b',linestyle = '-',label = r'$vx_{ref}$ (no cbf)')
-plt.legend()
+plt.plot(tVec,vx_ref_nocbf,'r',linestyle = '-',label = r'$vx_{ref}$ (no cbf)')
+plt.plot(tVec,vx_ref_cbf,'b',linestyle = '-',label = r'$vx_{ref}$ (with cbf)')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$v_x$ [m/s]')
+plt.legend(loc = 'lower left')
 
 plt.subplot(2,1,2)
-plt.plot(tVec,omega_ref,'b',linestyle = '-',label = r'$\omega_{ref}$ (no cbf)')
-plt.plot()
-plt.legend()
+plt.plot(tVec,omega_ref_nocbf,'r',linestyle = '-',label = r'$\omega_{ref}$ (no cbf)')
+plt.plot(tVec,omega_ref_cbf,'b',linestyle = '-',label = r'$\omega_{ref}$ (with cbf)')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$\omega$ [rad/s]')
+plt.legend(loc = 'lower left')
 
-
-# ROBOT SIMULATION
+# Path without CBF
 mobile_robot = DDMR()  # robot initialization
 init_state = np.array([obs_path_nocbf[0,0], obs_path_nocbf[0,1], 1.589])  # initial state
 mobile_robot.set_state(state = init_state)  # set the initial state
@@ -174,26 +148,53 @@ state_rec.append(init_state)  # record the initial state
 mode_rec = []  # mode record list
 mode_rec.append('grip')  # record the initial mode
 for i in range(1,len(tVec)):
-    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref[i], omega_ref[i]]))  # perform a dynamics step
+    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref_nocbf[i], omega_ref_nocbf[i]]))  # perform a dynamics step
     state_rec.append(state)  # record the state
     mode_rec.append(mode)  # record the mode
 
 state_rec = np.array(state_rec)  # convert the list to a numpy array
 mode_rec = np.array(mode_rec)  # convert the list to a numpy array
 
+# Save path without CBF
+state_nocbf = copy.deepcopy(state_rec)
+mode_nocbf = copy.deepcopy(mode_rec)
+
+# Path with CBF
+mobile_robot = DDMR()  # robot initialization
+init_state = np.array([obs_path_cbf[0,0], obs_path_cbf[0,1], 1.589])  # initial state
+mobile_robot.set_state(state = init_state)  # set the initial state
+state_rec = []  # state record list
+state_rec.append(init_state)  # record the initial state
+mode_rec = []  # mode record list
+mode_rec.append('grip')  # record the initial mode
+for i in range(1,len(tVec)):
+    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref_cbf[i], omega_ref_cbf[i]]))  # perform a dynamics step
+    state_rec.append(state)  # record the state
+    mode_rec.append(mode)  # record the mode
+
+state_rec = np.array(state_rec)  # convert the list to a numpy array
+mode_rec = np.array(mode_rec)  # convert the list to a numpy array
+
+# Save path without CBF
+state_cbf = copy.deepcopy(state_rec)
+mode_cbf = copy.deepcopy(mode_rec)
+
 plt.figure()
-plt.plot(state_rec[:,0],state_rec[:,1],'b-',label = 'robot path (no cbf)')
-plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'k--',label = 'DMP obs. + nocbf')
+plt.plot(state_nocbf[:,0],state_nocbf[:,1],'r-',label = 'robot path (no cbf)')
+plt.plot(state_cbf[:,0],state_cbf[:,1],'b-',label = 'robot path (with cbf)')
+# Plot the obstacle
+circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
+plt.gca().add_patch(circle)
+plt.xlabel('$x$ [m]')
+plt.ylabel('$y$ [m]')
 plt.legend()
 
 plt.figure()
-plt.plot(tVec,state_rec[:,2],'b-',label = 'orient (no cbf)')
-plt.legend()
-
-plt.figure()
-plt.plot(tVec,mode_rec,'b-',label = 'mode (no cbf)')
+plt.plot(tVec,mode_nocbf,'r-',label = 'mode (no cbf)')
+plt.plot(tVec,mode_cbf,'b-',label = 'mode (with cbf)')
+plt.xlabel('Time [s]')
+plt.ylabel('Mode')
 plt.legend()
 
 plt.show()
 print(">> End of the script")
-
