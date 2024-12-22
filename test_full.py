@@ -118,11 +118,10 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     # Centrifugal force
     F_cf = ((x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])**2/((x_list[:,0]**2+x_list[:,1]**2)**(3/2)))
 
-    # Calculate robot's commands from the Cartesian velocities
-    rho = np.sqrt(x_list[:,0]**2 + x_list[:,1]**2)
-    omega = (x_list[:,0]*x_dot_list[:,1]-x_list[:,1]*x_dot_list[:,0])/(x_list[:,0]**2 + x_list[:,1]**2)
-    vx_ref = rho * omega # reference forward velocity
-    omega_ref = omega # reference angular velocity
+    # Reference inputs for the DDMR
+    time_step = 0.01  # time step
+    tVec = np.linspace(0, len(x_list)*time_step, len(x_list))  # time vector
+    vx_ref, omega_ref = get_ddmr_refinputs(tVec, x_list, x_dot_list, dt = 0.01, mass = 1.0, inertia = 0.1, input_type = 'velocity')
 
     # Plot the result
     plt.subplot(2,2,1)
@@ -160,6 +159,7 @@ def plot(x_list, x_dot_list, x_ddot_list, obstacle_centers = [], obstacle_axis =
     plt.xlabel(r'$t$ [s]', fontsize = 15)
     plt.ylabel(r'$\omega$ [rad/s]', fontsize = 15)
     plt.grid(True, linestyle = '--', linewidth = 0.5)
+
 
 
 
