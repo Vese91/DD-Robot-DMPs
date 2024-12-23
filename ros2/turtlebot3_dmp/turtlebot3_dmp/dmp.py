@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 
 #make cbf.py visible
 import sys
-sys.path.append('/home/daniele/colcon_ws/src/turtlebot3_follow/turtlebot3_follow')
+sys.path.append('/home/daniele/colcon_ws/src/turtlebot3_dmp/turtlebot3_dmp')
 from cbf import CBF
 
 import math
@@ -56,7 +56,6 @@ class Turtlebot3DMP(Node):
 
         self.init_task()
         self.train_dmps()
-
 
 
 
@@ -254,16 +253,18 @@ class Turtlebot3DMP(Node):
             msg_pub.linear.x = vx
             msg_pub.angular.z = omega
             self.publisher_.publish(msg_pub)
+            time.sleep(self.dt)
+            # self.publisher_.publish(Twist())
             self.iter += 1
 
         else:
             self.stop_robot()
-            self.plot_traj()
+            # self.plot_traj()
             self.destroy_node()
             rclpy.shutdown()
         
-        if time.time() - self.init_time < self.dt:
-            time.sleep(self.dt - (time.time() - self.init_time))
+        # if time.time() - self.init_time < self.dt:
+        #     time.sleep(self.dt - (time.time() - self.init_time))
         
         # self.get_logger().info('Time: %f' % (time.time() - init_time))
 
