@@ -19,7 +19,7 @@ CBFs are used to ensure safety in the system, while DMPs are used to generate sm
 mu_s = 0.7  # static friction coefficient
 mu_d = 0.56  # dynamic friction coefficient (80% of static friction)
 g = 9.81 # gravity acceleration [m/s^2]
-alpha = 50 # extended class-K function parameter (straight line)
+alpha = 50 # extended class-K function parameter (straight line, default 50)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
 
 # Reference trajectory (Cartesian coordinates) 
@@ -91,6 +91,7 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 obs_path_nocbf = copy.deepcopy(x_list)
 obs_vel_nocbf = copy.deepcopy(x_dot_list)
 
+
 # OBSTACLE (WITH CBF)
 cbf = CBF()  # CBF initialization
 dmp_traj.reset_state()  # reset the state of the DMPs
@@ -112,6 +113,17 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 # Save the learnt trajectory for the next part
 obs_path_cbf = copy.deepcopy(x_list)
 obs_vel_cbf = copy.deepcopy(x_dot_list)
+obs_acc_cbf = copy.deepcopy(x_ddot_list)
+
+plt.figure()
+plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'robot path (no cbf)')
+plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'robot path (with cbf)')
+circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
+plt.gca().add_patch(circle)
+plt.xlabel('$x$ [m]')
+plt.ylabel('$y$ [m]')
+plt.legend()
+plt.show()
 
 # Centrifugal force
 tVec = np.linspace(0,t[-1],len(obs_path_nocbf))
@@ -123,6 +135,7 @@ F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])*
 # Get the reference inputs for the DDMR
 vx_ref_nocbf, omega_ref_nocbf = DDMR.get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf)
 vx_ref_cbf, omega_ref_cbf = DDMR.get_ddmr_refinputs(tVec, obs_path_cbf, obs_vel_cbf)
+
 
 plt.figure()
 plt.subplot(2,1,1)

@@ -43,6 +43,8 @@ class CBF():
         y = dmp_traj.x[1]  # y position 
         dx = dmp_traj.dx[0]  # x velocity
         dy = dmp_traj.dx[1]  # y velocity
+        ddx = dmp_traj.ddx[0]  # x acceleration
+        ddy = dmp_traj.ddx[1]  # y acceleration
 
         # Drift term of the system
         f1 = dx / self.tau
@@ -63,13 +65,31 @@ class CBF():
 
         # CBF 
         K_appr = 0.0001  # approximation constant
-        h = mu_s*g - np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3 + K_appr)  # constraint function (new)
+        #h = mu_s*g - np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3 + K_appr)  # constraint function 
+        if dx == 0 and dy == 0:
+            h = mu_s*g - np.sqrt(K_appr)
+        else:
+            h = mu_s*g - np.sqrt(((ddy*dx-ddx*dy)**2/(dx**2+dy**2)) + K_appr)  # constraint function (new)
+
+        # Gradient of h components (equation 14 in paper)
+        # dh1 = -((dy*x - dx*y)**3*(-dy*x**2 + 3*dx*x*y + 2*dy*y**2))/((x**2 + y**2)**4*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to x (new)
+        # dh2 = ((dy*x - dx*y)**3*(2*dx*x**2 + 3*dy*x*y - dx*y**2))/((x**2 + y**2)**4*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to y (new)
+        # dh3 = (2*y*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to dx (new)
+        # dh4 = -(2*x*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to dy (new)
 
         # Gradient of h components (new)
-        dh1 = -((dy*x - dx*y)**3*(-dy*x**2 + 3*dx*x*y + 2*dy*y**2))/((x**2 + y**2)**4*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to x (new)
-        dh2 = ((dy*x - dx*y)**3*(2*dx*x**2 + 3*dy*x*y - dx*y**2))/((x**2 + y**2)**4*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to y (new)
-        dh3 = (2*y*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to dx (new)
-        dh4 = -(2*x*(dy*x - dx*y)**3)/((x**2 + y**2)**3*np.sqrt((dy*x - dx*y)**4/(x**2 + y**2)**3) + K_appr)  # derivative of h with respect to dy (new)
+        # remember that K1 = K2 = K
+        if dx == 0 and dy == 0:
+            dh1 = 0
+            dh2 = 0
+            dh3 = 0
+            dh4 = 0
+        else:
+            term_1 = dy*(D1*dx-K1*forc_term_1+K1*(x-xg)-K1*(x0-xg)*dmp_traj.cs.s) - dx*(D1*dy-K1*forc_term_2+K1*(y-yg)-K1*(y0-yg)*dmp_traj.cs.s)
+            dh1 = -K1*dy*term_1/(np.sqrt(K_appr + term_1**2/(dx**2+dy**2))*(dx**2+dy**2))  # derivative of h with respect to x (new)
+            dh2 = K1*dx*term_1/(np.sqrt(K_appr + term_1**2/(dx**2+dy**2))*(dx**2+dy**2))  # derivative of h with respect to y (new)
+            dh3 = -(((2*term_1*(K1*forc_term_2-K1*(y-yg)+K1*(y0-yg)*dmp_traj.cs.s))/(dx**2+dy**2))-(2*dx*term_1**2/(dx**2+dy**2)**2))/(2*np.sqrt(K_appr + term_1**2/(dx**2+dy**2)))  # derivative of h with respect to dx (new)
+            dh4 = (((2*term_1*(K1*forc_term_1-K1*(x-xg)+K1*(x0-xg)*dmp_traj.cs.s))/(dx**2+dy**2))+(2*dy*term_1**2/(dx**2+dy**2)**2))/(2*np.sqrt(K_appr + term_1**2/(dx**2+dy**2)))  # derivative of h with respect to dy (new)
 
         # Lie derivatives of h
         Lfh = dh1*f1 + dh2*f2 + dh3*f3 + dh4*f4  # Lie derivative of h with respect to f
@@ -80,7 +100,7 @@ class CBF():
         dot_h = Lfh + Lghu  # time derivative of h
         Psi = dot_h + alpha*(h**exp)  # safety function
         K_psi = - Lgh.T / (Lgh @ Lgh.T)  # gain matrix
-        # K_psi = - np.nan_to_num(Lgh.T / (Lgh @ Lgh.T))  # gain matrix
+        #K_psi = - np.nan_to_num(Lgh.T / (Lgh @ Lgh.T))  # gain matrix
         if Psi >= 0:
             u_safe = np.array([0, 0])
         elif Psi < 0:
