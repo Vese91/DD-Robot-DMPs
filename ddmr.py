@@ -4,13 +4,14 @@ class DDMR(object):
     '''
     Differential-Drive Mobile Robot (DDMR) class.
     '''
-    def __init__(self, state = np.zeros(6), mode = 'grip', vy_in = 0.0, mu_s = 0.70, mu_d = 0.56, g = 9.81):
+    def __init__(self, state = np.zeros(6), mode = 'grip', vy_in = 0.0, omega_max = 2.83, mu_s = 0.70, mu_d = 0.56, g = 9.81):
         '''
         Class constructor.
         '''
         self.state = state  # robot state (x,y,theta,vx,vy,w)
         self.mode = mode  # robot mode (grip, slip)
         self.vy_in = vy_in  # robot lateral velocity 
+        self.omega_max = omega_max  # maximum angular velocity
         self.mu_s = mu_s  # static friction coefficient
         self.mu_d = mu_d  # dynamic friction coefficient
         self.g = g  # gravity constant [m/s^2]
@@ -21,36 +22,20 @@ class DDMR(object):
         '''
         self.state = state
 
-    def get_ddmr_refinputs(tVec, traj, vel):
+    def get_ref_velocity(self, Tf = 1.0, path = np.zeros([10,2]), vel = np.zeros([10,2])):
         '''
-        Function to calculate the reference velocity for the DDMR.
-        
-        Inputs:
-            tVec: time vector, the final time has to be the final time of DMPs (numpy array of shape (N,))
-            traj: trajectory (numpy array of shape (N,2)) 
-            vel: velocity (numpy array of shape (N,2))
-            
-        Outputs:
-            vx_ref: reference forward velocity
-            omega_ref: reference angular velocity
+        None
         '''
-        # Calculate the tangential orientation and angular velocity
-        orient = np.arctan2(np.gradient(traj[:, 1]), np.gradient(traj[:, 0]))  # orientation angle
-        orient = np.unwrap(orient)  # unwrap the orientation angle (to avoid jumps)
-        angvel = np.gradient(orient) / np.gradient(tVec)  # Calculate the angular velocity
+        # Time vector
+        tVec = np.linspace(0,Tf,len(path))
 
-        vref = []  # reference velocity list
-        for i in range(len(orient)):
-            theta = orient[i]  # current orientation
-            A = np.array([[np.cos(theta),np.sin(theta),0],[0,0,1]])  # inverse kinematics matrix
-            b = np.array([vel[i,0], vel[i,1], angvel[i]])  # velocity vector in inertial frame
-            vref_i = np.matmul(A,b)  # reference velocity
-            vref.append(vref_i)  # reference velocity
-            
-        # Convert the list to a numpy array
-        vref = np.array(vref)  # reference velocity (shape (N,2))
-        vx_ref = vref[:,0]  # reference forward velocity
-        omega_ref = vref[:,1]  # reference angular velocity
+        # Reference forward velocity
+        vx_ref = np.sqrt(vel[:,0]**2+vel[:,1]**2)
+
+        # Reference angular velocity
+        theta = np.arctan2(np.gradient(path[:,1]), np.gradient(path[:,0]))
+        theta = np.unwrap(theta)
+        omega_ref = np.gradient(theta)/np.gradient(tVec)
 
         return vx_ref, omega_ref
     
@@ -97,6 +82,7 @@ class DDMR(object):
             mode: updated mode
         '''
         vy_critical = 0.001  # critical slip velocity
+        K_appr = 0.0001  # approximation constant  # approximation constant
         if self.mode == 'grip':
             # Unpack the state
             x = self.state[0]  # x position
@@ -111,15 +97,8 @@ class DDMR(object):
             state_0 = np.array([x,y,theta]) # current state
             self.state = state_0 + dt*np.array([vx_in * np.cos(theta), vx_in * np.sin(theta), omega_in])  # explicit Euler integration
 
-            # Constraint calculation
-            x = self.state[0]  # x position (after integration)
-            y = self.state[1]  # y position (after integration)
-            dx,dy,_ = self.forward_kinematics(u)  # forward kinematics
-            rho = np.sqrt(x**2+y**2) # distance to the origin
-            omega = (x*dy-y*dx)/(x**2+y**2)  # angular velocity
-
-            # Constraint check: hr(x)>=0 -> rho*omega^2 <= mu_s*g
-            if rho*omega**2 > self.mu_s*self.g:  
+            # Check if the robot is slipping
+            if vx_in > np.sqrt(self.mu_s**2*self.g**2-K_appr)/self.omega_max:
                 self.mode = 'slip'
 
             return self.state, self.mode

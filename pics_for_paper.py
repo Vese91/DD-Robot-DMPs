@@ -18,9 +18,11 @@ CBFs are used to ensure safety in the system, while DMPs are used to generate sm
 # Dynamic parameters
 mu_s = 0.7  # static friction coefficient
 mu_d = 0.56  # dynamic friction coefficient (80% of static friction)
+omega_max = 2.83  # maximum angular velocity [rad/s]
 g = 9.81 # gravity acceleration [m/s^2]
-alpha = 50 # extended class-K function parameter (straight line, default 50)
+alpha = 10 # extended class-K function parameter (straight line, default 50)
 exp = 1 # exponent of the extended class-K function, it must be an odd number (leave it as 1)
+K_appr = 0.0001  # approximation of the constraint (default 0.0001)
 
 # Reference trajectory (Cartesian coordinates) 
 N = 1000  # discretization points
@@ -36,9 +38,9 @@ ref_vel = np.vstack((dx,dy)).T  # reference velocity
 
 # DMPs training
 n_bfs = 100  # number of basis functions
-dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 115, dt = 0.01, T = t[-1],
-                              alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs
-dmp_traj.imitate_path(x_des=ref_path)  # train the DMPs
+dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 68, dt = 0.01, T = t[-1],
+                              alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs (K=115)
+dmp_traj.imitate_path(x_des = ref_path)  # train the DMPs
 
 # DMPs execution (no CBF)
 dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
@@ -104,7 +106,7 @@ obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis,
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     obs_force = obstacle.gen_external_force(dmp_traj.x, dmp_traj.dx)
-    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, g, exp, obs_force)
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha, mu_s, g, exp, obs_force, omega_max, K_appr)  # compute the external force
     x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
@@ -115,7 +117,9 @@ obs_path_cbf = copy.deepcopy(x_list)
 obs_vel_cbf = copy.deepcopy(x_dot_list)
 obs_acc_cbf = copy.deepcopy(x_ddot_list)
 
-plt.figure()
+
+# Path
+plt.figure(1)
 plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'robot path (no cbf)')
 plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'robot path (with cbf)')
 circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
@@ -123,91 +127,87 @@ plt.gca().add_patch(circle)
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
 plt.legend()
-plt.show()
 
-# Centrifugal force
-tVec = np.linspace(0,t[-1],len(obs_path_nocbf))
-F_nocbf = (obs_path_nocbf[:,0]*obs_vel_nocbf[:,1]-obs_path_nocbf[:,1]*obs_vel_nocbf[:,0])**2 / (obs_path_nocbf[:,0]**2+obs_path_nocbf[:,1]**2)**(3/2)  # (x*dy-y*dx)^2/(x^2+y^2)^(3/2)
-F_cbf = (obs_path_cbf[:,0]*obs_vel_cbf[:,1]-obs_path_cbf[:,1]*obs_vel_cbf[:,0])**2 / (obs_path_cbf[:,0]**2+obs_path_cbf[:,1]**2)**(3/2)
-
-# ROBOT SIMULATION
-#
-# Get the reference inputs for the DDMR
-vx_ref_nocbf, omega_ref_nocbf = DDMR.get_ddmr_refinputs(tVec, obs_path_nocbf, obs_vel_nocbf)
-vx_ref_cbf, omega_ref_cbf = DDMR.get_ddmr_refinputs(tVec, obs_path_cbf, obs_vel_cbf)
-
-
-plt.figure()
+# Velocity in inertial frame
+plt.figure(2)
 plt.subplot(2,1,1)
-plt.plot(tVec,vx_ref_nocbf,'r',linestyle = '-',label = r'$vx_{ref}$ (no cbf)')
-plt.plot(tVec,vx_ref_cbf,'b',linestyle = '-',label = r'$vx_{ref}$ (with cbf)')
+plt.plot(obs_vel_nocbf[:,0],'r-',label = 'robot velocity (no cbf)')
+plt.plot(obs_vel_cbf[:,0],'b-',label = 'robot velocity (with cbf)')
+plt.ylabel(r'$\dot{x}$ [m/s]')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$v_x$ [m/s]')
-plt.legend(loc = 'lower left')
+plt.legend()
 
 plt.subplot(2,1,2)
-plt.plot(tVec,omega_ref_nocbf,'r',linestyle = '-',label = r'$\omega_{ref}$ (no cbf)')
-plt.plot(tVec,omega_ref_cbf,'b',linestyle = '-',label = r'$\omega_{ref}$ (with cbf)')
+plt.plot(obs_vel_nocbf[:,1],'r-',label = 'robot velocity (no cbf)')
+plt.plot(obs_vel_cbf[:,1],'b-',label = 'robot velocity (with cbf)')
+plt.ylabel(r'$\dot{y}$ [m/s]')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$\omega$ [rad/s]')
-plt.legend(loc = 'lower left')
+plt.legend()
 
-# Path without CBF
-mobile_robot = DDMR()  # robot initialization
-init_state = np.array([obs_path_nocbf[0,0], obs_path_nocbf[0,1], 1.589])  # initial state
-mobile_robot.set_state(state = init_state)  # set the initial state
-state_rec = []  # state record list
-state_rec.append(init_state)  # record the initial state
-mode_rec = []  # mode record list
-mode_rec.append('grip')  # record the initial mode
-for i in range(1,len(tVec)):
-    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref_nocbf[i], omega_ref_nocbf[i]]))  # perform a dynamics step
-    state_rec.append(state)  # record the state
-    mode_rec.append(mode)  # record the mode
+# Forward velocity in body frame
+vx_nocbf = np.sqrt(obs_vel_nocbf[:,0]**2+obs_vel_nocbf[:,1]**2)
+vx_cbf = np.sqrt(obs_vel_cbf[:,0]**2+obs_vel_cbf[:,1]**2)
+constraint = np.sqrt(mu_s**2*g**2-K_appr)/omega_max
 
-state_rec = np.array(state_rec)  # convert the list to a numpy array
-mode_rec = np.array(mode_rec)  # convert the list to a numpy array
+plt.figure(3)
+plt.plot(vx_nocbf,'r-',label = 'robot velocity (no cbf)')
+plt.plot(vx_cbf,'b-',label = 'robot velocity (with cbf)')
+plt.plot(constraint*np.ones(len(vx_nocbf)),'r--',label = r'$\mu_s g/\omega_{max}$')
+plt.xlabel('Time [s]')
+plt.ylabel(r'$v_x$ [m/s]')
+plt.legend()
 
-# Save path without CBF
-state_nocbf = copy.deepcopy(state_rec)
-mode_nocbf = copy.deepcopy(mode_rec)
 
-# Path with CBF
-mobile_robot = DDMR()  # robot initialization
-init_state = np.array([obs_path_cbf[0,0], obs_path_cbf[0,1], 1.589])  # initial state
-mobile_robot.set_state(state = init_state)  # set the initial state
-state_rec = []  # state record list
-state_rec.append(init_state)  # record the initial state
-mode_rec = []  # mode record list
-mode_rec.append('grip')  # record the initial mode
-for i in range(1,len(tVec)):
-    state, mode = mobile_robot.dynamics_step(dt = 0.01, u = np.array([vx_ref_cbf[i], omega_ref_cbf[i]]))  # perform a dynamics step
-    state_rec.append(state)  # record the state
-    mode_rec.append(mode)  # record the mode
+# ROBOT CONTROL
+# no cbf
+robot = DDMR()  # robot initialization at default parameters
+x0 = 3.0
+y0 = 0.0
+theta0 = 1.657  # it has to be tuned case-by-case since the control is open loop
+robot.set_state([x0, y0, theta0])  # set the robot state ([m, m, rad])
+Tf = t[-1]  # final time (the same given to DMPs training)
+vx_ref, omega_ref = robot.get_ref_velocity(Tf, obs_path_nocbf, obs_vel_nocbf)  # get the reference velocity
 
-state_rec = np.array(state_rec)  # convert the list to a numpy array
-mode_rec = np.array(mode_rec)  # convert the list to a numpy array
+# Control loop (no cbf)
+state_list = []
+state_list.append(robot.state)
+mode_list = []
+mode_list.append(robot.mode)
+for i in range(1,len(obs_path_nocbf)):
+    robot.state, robot.mode = robot.dynamics_step(dt = 0.01, u = np.array([vx_ref[i], omega_ref[i]]))
+    state_list.append(robot.state)
+    mode_list.append(robot.mode)
 
-# Save path without CBF
-state_cbf = copy.deepcopy(state_rec)
-mode_cbf = copy.deepcopy(mode_rec)
+robot_path_nocbf = np.array(state_list)
+robot_mode_nocbf = np.array(mode_list)
 
-plt.figure()
-plt.plot(state_nocbf[:,0],state_nocbf[:,1],'r-',label = 'robot path (no cbf)')
-plt.plot(state_cbf[:,0],state_cbf[:,1],'b-',label = 'robot path (with cbf)')
-# Plot the obstacle
+# cbf
+robot.set_state([x0, y0, theta0])  # set the robot state ([m, m, rad])
+Tf = t[-1]  # final time (the same given to DMPs training)
+vx_ref, omega_ref = robot.get_ref_velocity(Tf, obs_path_cbf, obs_vel_cbf)  # get the reference velocity
+
+# Control loop (cbf)
+state_list = []
+state_list.append(robot.state)
+mode_list = []
+mode_list.append(robot.mode)
+for i in range(1,len(obs_path_cbf)):
+    robot.state, robot.mode = robot.dynamics_step(dt = 0.01, u = np.array([vx_ref[i], omega_ref[i]]))
+    state_list.append(robot.state)
+    mode_list.append(robot.mode)
+
+robot_path_cbf = np.array(state_list)
+robot_mode_cbf = np.array(mode_list)
+
+plt.figure(4)
+plt.plot(robot_path_nocbf[:,0],robot_path_nocbf[:,1],'r-',label = 'robot path (no cbf)')
+plt.plot(robot_path_cbf[:,0],robot_path_cbf[:,1],'b-',label = 'robot path (with cbf)')
 circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
 plt.gca().add_patch(circle)
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
 plt.legend()
 
-plt.figure()
-plt.plot(tVec,mode_nocbf,'r-',label = 'mode (no cbf)')
-plt.plot(tVec,mode_cbf,'b-',label = 'mode (with cbf)')
-plt.xlabel('Time [s]')
-plt.ylabel('Mode')
-plt.legend()
-
 plt.show()
 print(">> End of the script")
+
