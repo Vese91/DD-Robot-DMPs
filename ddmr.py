@@ -4,13 +4,14 @@ class DDMR(object):
     '''
     Differential-Drive Mobile Robot (DDMR) class.
     '''
-    def __init__(self, state = np.zeros(6), mode = 'grip', vy_in = 0.0, omega_max = 2.83, mu_s = 0.70, mu_d = 0.56, g = 9.81):
+    def __init__(self, state = np.zeros(6), mode = 'grip', vy_in = 0.0, vx_max = 1.0, omega_max = 2.83, mu_s = 0.70, mu_d = 0.56, g = 9.81):
         '''
         Class constructor.
         '''
         self.state = state  # robot state (x,y,theta,vx,vy,w)
         self.mode = mode  # robot mode (grip, slip)
         self.vy_in = vy_in  # robot lateral velocity 
+        self.vx_max = vx_max  # maximum forward velocity
         self.omega_max = omega_max  # maximum angular velocity
         self.mu_s = mu_s  # static friction coefficient
         self.mu_d = mu_d  # dynamic friction coefficient
