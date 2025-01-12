@@ -226,6 +226,78 @@ plt.plot(tVec_nocbf,mu_s*g*np.ones(len(v_nocbf)),'k--',label = r'$\mu_s\,g$')
 plt.xlabel('Time [s]')
 plt.ylabel(r'$F$ [N]')
 plt.legend(loc = 'lower right')
-plt.show()
 
+# =============================================================================
+# CASE 3: DMPs with obstacles as CBF
+# =============================================================================
+# Reference trajectory (Cartesian coordinates)
+N = 1000  # discretization points
+a0 = 3.0  # ellipse major axis
+a1 = 1.0  # ellipse minor axis
+t = np.linspace(0,np.pi,N)  # time
+x = a0*np.cos(t)  # x
+y = a1*np.sin(t)  # y
+dx = -a0*np.sin(t)  # dx
+dy = a1*np.cos(t)  # dy
+ref_path = np.vstack((x,y)).T  # reference path
+ref_vel = np.vstack((dx,dy)).T  # reference velocity
+
+# DMPs training
+n_bfs = 100  # number of basis functions
+time_step = 0.01  # time-step
+dmp_traj = dmp.DMPs_cartesian(n_dmps = 2, n_bfs = n_bfs, K = 100, dt = time_step, T = t[-1],
+                              alpha_s = 2.0, tol = 3.0 / 100, rescale = "rotodilatation", basis = "gaussian")  # set up the DMPs (K=115)
+dmp_traj.imitate_path(x_des = ref_path)  # train the DMPs
+
+# DMPs execution (no CBF)
+dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
+dmp_traj.x_goal = np.array([-2.5, 0.0])  # new goal in cartesian coordinates
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    x, x_dot, x_ddot = dmp_traj.step()  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Save the learnt trajectory for the next part
+learnt_path = copy.deepcopy(x_list)
+learnt_vel = copy.deepcopy(x_dot_list)
+
+# DMPs with Obstacle as CBF
+alpha = 50  # CBF gain
+cbf = CBF()  # CBF initialization
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+obstacle_center = np.array([0.00, 0.90])  # obstacle center
+
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    obs_force = np.array([0,0])  # no obstacle external force
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha = alpha, exp = 1.0, obs_center = obstacle_center,
+                                                      obs_force = obs_force, K_appr = K_approx, type = 'obstacle')  # compute the external force
+    x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Save the learnt trajectory for the next part
+path_cbf = copy.deepcopy(x_list)
+vel_cbf = copy.deepcopy(x_dot_list)
+
+plt.figure(3)
+plt.plot(learnt_path[:,0],learnt_path[:,1],'b--',label = 'learnt path')
+plt.plot(path_cbf[:,0],path_cbf[:,1],'b-',label = 'cbf')
+plt.plot(obstacle_center[0],obstacle_center[1],'ro',label = 'obstacle')
+plt.xlabel('$x$ [m]')
+plt.ylabel('$y$ [m]')
+plt.legend(loc = 'lower right')
+
+plt.show()
 print(">>  End of the script")
