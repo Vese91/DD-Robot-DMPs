@@ -27,8 +27,8 @@ class CBF():
         f = dmp_traj.w @ psi[:, 0] / (np.sum(psi[:, 0])) * dmp_traj.cs.s
         f = np.nan_to_num(M @ f)
         return f
-    
-    def compute_u_safe_dmp_traj(self, dmp_traj, v_max = 1.0, mu_s = 0.5, obs_center = np.array([0,0]),
+
+    def compute_u_safe_dmp_traj(self, dmp_traj, v_max = 1.0, a_max = 5.0, delta_0 = 0.10, eta = 0.50, r_min = 0.25, gamma = 90.0, obs_center = np.array([0,0]),
                                 alpha = 1.0, exp = 1.0, obs_force = np.array([0,0]), K_appr = 0.0001, type = 'velocity'):
         # Coefficients and variables
         K1 = dmp_traj.K  # spring constant 1
@@ -87,8 +87,7 @@ class CBF():
     
         elif type == 'force':
             # Control Barrier Function (CBF)
-            g = 9.81  # gravity constant [m/s^2]
-            h = mu_s*g - np.sqrt((dy*x-dx*y)**4/(x**2+y**2)**3+K_appr)  # constraint function
+            h = a_max - np.sqrt((dy*x-dx*y)**4/(x**2+y**2)**3+K_appr)  # constraint function
             
             # Gradient of h components 
             dh1 = -((dy*x-dx*y)**3*(-dy*x**2+3*dx*x*y+2*dy*y**2))/((x**2+y**2)**4*(K_appr+(dy*x-dx*y)**4/(x**2+y**2)**3)**(1/2))
@@ -118,23 +117,23 @@ class CBF():
             dyO = 0  # y velocity of the obstacle
             delta_0 = 0.05  # small constant for control barrier function
             eta = 0.25  # repulsive gain factor
-            r_min = 2.0  # radius over which the repulsive potential field is active
-            a_max = 90.0  # maximum acceleration for the robot
+            r_min = 0.25  # radius over which the repulsive potential field is active
+            gamma = 100.0  # maximum acceleration for the robot
 
             # Repulsive potential field U(x,v)
             n_ro = (1/np.sqrt((xO-x)**2+(yO-y)**2))*np.array([[xO-x,yO-y]]).T  # unit vector pointing from the robot to the obstacle
             v_ro = np.array([dx-dxO,dy-dyO]) @ n_ro  # relative velocity between the robot and the obstacle
-            rho_delta = np.sqrt((x-xO)**2+(y-yO)**2)-v_ro**2/(2*a_max)  # dynamic distance between the robot and the obstacle
+            rho_delta = np.sqrt((x-xO)**2+(y-yO)**2)-v_ro**2/(2*gamma)  # dynamic distance between the robot and the obstacle
             U_rep = eta*(1/rho_delta-1/r_min)  # repulsive potential field
 
             # Constraint function h(x)
             h = 1/(1+U_rep)-delta_0  # constraint function
 
             # Gradient of h(x) (components)
-            dh1 = (eta*((x-xO)/((x-xO)**2+(y-yO)**2)**(1/2)+((2*x-2*xO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2)/(2*a_max*((x-xO)**2+(y-yO)**2)**2)-((dx-dxO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(a_max*((x-xO)**2+(y-yO)**2))))/((((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
-            dh2 = (eta*((y-yO)/((x-xO)**2+(y-yO)**2)**(1/2)+((2*y-2*yO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2)/(2*a_max*((x-xO)**2+(y-yO)**2)**2)-((dy-dyO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(a_max*((x-xO)**2+(y-yO)**2))))/((((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
-            dh3 = -(eta*(x-xO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(a_max*((x-xO)**2+(y-yO)**2)*(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
-            dh4 = -(eta*(y-yO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(a_max*((x-xO)**2+(y-yO)**2)*(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
+            dh1 = (eta*((x-xO)/((x-xO)**2+(y-yO)**2)**(1/2)+((2*x-2*xO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2)/(2*gamma*((x-xO)**2+(y-yO)**2)**2)-((dx-dxO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(gamma*((x-xO)**2+(y-yO)**2))))/((((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
+            dh2 = (eta*((y-yO)/((x-xO)**2+(y-yO)**2)**(1/2)+((2*y-2*yO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2)/(2*gamma*((x-xO)**2+(y-yO)**2)**2)-((dy-dyO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(gamma*((x-xO)**2+(y-yO)**2))))/((((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
+            dh3 = -(eta*(x-xO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(gamma*((x-xO)**2+(y-yO)**2)*(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
+            dh4 = -(eta*(y-yO)*(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO))/(gamma*((x-xO)**2+(y-yO)**2)*(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*a_max*((x-xO)**2+(y-yO)**2)))**2*(eta*(1/(((x-xO)**2+(y-yO)**2)**(1/2)-(dx*x-dxO*x-dx*xO+dxO*xO+dy*y-dyO*y-dy*yO+dyO*yO)**2/(2*gamma*((x-xO)**2+(y-yO)**2)))-1/r_min)+1)**2)
 
             # Lie derivatives of h
             Lfh = dh1*f1 + dh2*f2 + dh3*f3 + dh4*f4  # Lie derivative of h with respect to f

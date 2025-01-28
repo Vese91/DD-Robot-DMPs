@@ -114,7 +114,7 @@ obs_vel_cbf = copy.deepcopy(x_dot_list)
 v_cbf = np.sqrt(obs_vel_cbf[:,0]**2+obs_vel_cbf[:,1]**2)  # velocity
 tVec_cbf = np.linspace(0,len(v_cbf)*time_step,len(v_cbf))  # time vector
 
-plt.figure(1)
+plt.figure(1, figsize=(8, 6), tight_layout=True)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'no cbf')
@@ -182,8 +182,7 @@ F_nocbf = (path_nocbf[:,0]*vel_nocbf[:,1]-path_nocbf[:,1]*vel_nocbf[:,0])**2/((p
 
 # DMPs (CBF)
 alpha = 50  # CBF gain
-mu_s = 1.20  # static friction coefficient
-g = 9.81  # gravity constant [m/s^2]
+a_max = 12.0  # maximum acceleration [m/s^2]
 K_approx = 0.0001  # approximation gain
 cbf = CBF()  # CBF initialization
 dmp_traj.reset_state()  # reset the state of the DMPs
@@ -194,7 +193,7 @@ x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     obs_force = np.array([0,0])  # no obstacle
-    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, mu_s = mu_s, alpha = alpha, exp = 1.0, 
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, a_max = a_max, alpha = alpha, exp = 1.0, 
                                                       obs_force = obs_force, K_appr = K_approx, type = 'force')  # compute the external force
     x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
     x_list = np.vstack((x_list, x))
@@ -210,7 +209,7 @@ vel_cbf = copy.deepcopy(x_dot_list)
 tVec_cbf = np.linspace(0,len(path_nocbf)*time_step,len(path_nocbf))  # time vector
 F_cbf = (path_cbf[:,0]*vel_cbf[:,1]-path_cbf[:,1]*vel_cbf[:,0])**2/((path_cbf[:,0]**2+path_cbf[:,1]**2)**(3/2))
 
-plt.figure(2)
+plt.figure(2, figsize=(8, 6), tight_layout=True)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(path_nocbf[:,0],path_nocbf[:,1],'r-',label = 'no cbf')
@@ -222,7 +221,7 @@ plt.legend(loc = 'lower right')
 plt.subplot(2,1,2)  
 plt.plot(tVec_nocbf,F_nocbf,'r-',label = 'no cbf')
 plt.plot(tVec_cbf,F_cbf,'b-',label = 'cbf')
-plt.plot(tVec_nocbf,mu_s*g*np.ones(len(v_nocbf)),'k--',label = r'$\mu_s\,g$')
+plt.plot(tVec_nocbf,a_max*np.ones(len(v_nocbf)),'k--',label = r'$a_{max}$')
 plt.xlabel('Time [s]')
 plt.ylabel(r'$F$ [N]')
 plt.legend(loc = 'lower right')
@@ -271,6 +270,10 @@ learnt_vel = copy.deepcopy(x_dot_list)
 # DMPs with Obstacle as CBF
 alpha = 50  # CBF gain
 cbf = CBF()  # CBF initialization
+delta_0 = 0.05  # small constant for control barrier function
+eta = 0.25  # repulsive gain factor
+r_min = 0.25  # radius over which the repulsive potential field is active
+gamma = 100.0  # maximum acceleration for the robot
 dmp_traj.reset_state()  # reset the state of the DMPs
 x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
@@ -280,7 +283,7 @@ obstacle_center = np.array([0.00, 0.90])  # obstacle center
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     obs_force = np.array([0,0])  # no obstacle external force
-    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha = alpha, exp = 1.0, obs_center = obstacle_center,
+    external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, alpha = alpha, exp = 1.0, delta_0 = delta_0, eta = eta, r_min = r_min, gamma = gamma, obs_center = obstacle_center,
                                                       obs_force = obs_force, K_appr = K_approx, type = 'obstacle')  # compute the external force
     x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
     x_list = np.vstack((x_list, x))
@@ -291,7 +294,7 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 path_cbf = copy.deepcopy(x_list)
 vel_cbf = copy.deepcopy(x_dot_list)
 
-plt.figure(3)
+plt.figure(3, figsize=(8, 6), tight_layout=True)
 plt.plot(learnt_path[:,0],learnt_path[:,1],'b--',label = 'learnt path')
 plt.plot(path_cbf[:,0],path_cbf[:,1],'b-',label = 'cbf')
 plt.plot(obstacle_center[0],obstacle_center[1],'ro',label = 'obstacle')
