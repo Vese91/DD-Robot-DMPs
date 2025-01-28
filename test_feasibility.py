@@ -11,7 +11,7 @@ from ddmr import DDMR
 import scipy.sparse as sparse
 
 # =============================================================================
-# CASE 1: DMP with obstacle and h(x) = v_max - sqrt(dx^2 + dy^2) as CBF
+# CASE 1: DMP with h(x) = v_max - sqrt(dx^2 + dy^2) as CBF
 # =============================================================================
 
 # Reference trajectory (Cartesian coordinates)
@@ -61,20 +61,20 @@ x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
 x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
 
 # obstacle_center = np.array(learnt_path[int(3*len(learnt_path)/5)]) + np.array([-0.05,-0.05])  # obstacle center
-obstacle_center = np.array(learnt_path[int(4*len(learnt_path)/7)]) + np.array([-0.05,-0.05])  # obstacle center
-radius = 0.2
-obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
+# obstacle_center = np.array(learnt_path[int(4*len(learnt_path)/7)]) + np.array([-0.05,-0.05])  # obstacle center
+# radius = 0.2
+# obstacle_axis = np.ones(dmp_traj.n_dmps) * radius
 
 # Superquadric parameters for obstacle
 lmbda = 2.0  # gain of relative orientation function (-lambda*cos(theta))
 beta = 2.0  # exponent of the relative orientation function (-cos(theta)^beta)
 eta = 1.0  # exponent of the superquadric function (C^eta(x))
-obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
-                                lmbda = lmbda, beta=beta, eta=eta, coeffs = np.ones(dmp_traj.n_dmps))
+# obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
+#                                 lmbda = lmbda, beta=beta, eta=eta, coeffs = np.ones(dmp_traj.n_dmps))
 
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
-    obs_force = obstacle.gen_external_force(dmp_traj.x, dmp_traj.dx)
+    obs_force = np.array([0,0])  # no obstacle external force
     x, x_dot, x_ddot = dmp_traj.step(external_force=obs_force)  # execute the DMPs
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
@@ -95,12 +95,12 @@ dmp_traj.reset_state()  # reset the state of the DMPs
 x_list = np.array(dmp_traj.x) # x, y
 x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
 x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
-obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
-                                lmbda = lmbda, beta = beta, eta = eta, coeffs = np.ones(dmp_traj.n_dmps))
+# obstacle = obs.Obstacle_Dynamic(center = obstacle_center, axis = obstacle_axis, 
+#                                 lmbda = lmbda, beta = beta, eta = eta, coeffs = np.ones(dmp_traj.n_dmps))
 
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
-    obs_force = obstacle.gen_external_force(dmp_traj.x, dmp_traj.dx)
+    obs_force = np.array([0,0])  # no obstacle external force
     external_force, psi = cbf.compute_u_safe_dmp_traj(dmp_traj, v_max = v_max, alpha = alpha, exp = 1.0, 
                                                       obs_force = obs_force, K_appr = K_approx, type = 'velocity')  # compute the external force
     x, x_dot, x_ddot = dmp_traj.step(external_force = external_force + obs_force)  # execute the DMPs
@@ -119,8 +119,8 @@ plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'no cbf')
 plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'cbf')
-circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
-plt.gca().add_patch(circle)
+# circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
+# plt.gca().add_patch(circle)
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
 plt.legend(loc = 'lower right')
@@ -130,7 +130,7 @@ plt.plot(tVec_nocbf,v_nocbf,'r-',label = 'no cbf')
 plt.plot(tVec_cbf,v_cbf,'b-',label = 'cbf')
 plt.plot(tVec_nocbf,v_max*np.ones(len(v_nocbf)),'k--',label = r'$v_{max}$')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$v$ [m/s]')
+plt.ylabel(r'$h(x)$')
 plt.legend(loc = 'lower right')
 #plt.show()
 
@@ -223,7 +223,7 @@ plt.plot(tVec_nocbf,F_nocbf,'r-',label = 'no cbf')
 plt.plot(tVec_cbf,F_cbf,'b-',label = 'cbf')
 plt.plot(tVec_nocbf,a_max*np.ones(len(v_nocbf)),'k--',label = r'$a_{max}$')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$F$ [N]')
+plt.ylabel(r'$h(x)$')
 plt.legend(loc = 'lower right')
 
 # =============================================================================
