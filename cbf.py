@@ -115,15 +115,21 @@ class CBF():
             yO = obs_center[1]  # y-coordinate of the obstacle
             dxO = 0  # x velocity of the obstacle
             dyO = 0  # y velocity of the obstacle
-            delta_0 = 0.05  # small constant for control barrier function
-            eta = 0.25  # repulsive gain factor
-            r_min = 0.25  # radius over which the repulsive potential field is active
-            gamma = 100.0  # maximum acceleration for the robot
+            # delta_0 = 0.05  # small constant for control barrier function
+            # eta = 0.25  # repulsive gain factor
+            # r_min = 0.25  # radius over which the repulsive potential field is active
+            # gamma = 100.0  # maximum acceleration for the robot
 
             # Repulsive potential field U(x,v)
-            n_ro = (1/np.sqrt((xO-x)**2+(yO-y)**2))*np.array([[xO-x,yO-y]]).T  # unit vector pointing from the robot to the obstacle
-            v_ro = np.array([dx-dxO,dy-dyO]) @ n_ro  # relative velocity between the robot and the obstacle
-            rho_delta = np.sqrt((x-xO)**2+(y-yO)**2)-v_ro**2/(2*gamma)  # dynamic distance between the robot and the obstacle
+            v_rel = np.array([dx - dxO, dy - dyO])
+            p_rel = np.array([x - xO, y - yO])
+            rho_s = np.linalg.norm(p_rel)
+            v_ro = np.dot(v_rel, -p_rel) / rho_s
+            rho_m = v_ro**2 / (2 * gamma)
+            rho_delta = rho_s - rho_m
+            # n_ro = (1/np.sqrt((xO-x)**2+(yO-y)**2))*np.array([[xO-x,yO-y]]).T  # unit vector pointing from the robot to the obstacle
+            # v_ro = np.array([dx-dxO,dy-dyO]) @ n_ro  # relative velocity between the robot and the obstacle
+            # rho_delta = np.sqrt((x-xO)**2+(y-yO)**2)-v_ro**2/(2*gamma)  # dynamic distance between the robot and the obstacle
             U_rep = eta*(1/rho_delta-1/r_min)  # repulsive potential field
 
             # Constraint function h(x)
