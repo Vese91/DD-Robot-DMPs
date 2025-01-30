@@ -52,6 +52,28 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 learnt_path = copy.deepcopy(x_list)
 learnt_vel = copy.deepcopy(x_dot_list)
 
+# DMPs execution (NO CBF) with different tau
+tau = 1.10  # time scaling factor
+dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
+dmp_traj.x_goal = np.array([-2.5, 0.0])  # new goal in cartesian coordinates
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    x, x_dot, x_ddot = dmp_traj.step(tau = tau)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Save the learnt trajectory for the next part
+path_tau = copy.deepcopy(x_list)
+path_vel = copy.deepcopy(x_dot_list) / tau
+v_tau = np.sqrt(path_vel[:,0]**2+path_vel[:,1]**2)  # velocity
+tVec_tau = np.linspace(0,len(v_tau)*time_step,len(v_tau))  # time vector
+
 # OBSTACLE (NO CBF)
 dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
 dmp_traj.x_goal = np.array([-2.5, 0.0])  # new goal in cartesian coordinates
@@ -75,7 +97,7 @@ eta = 1.0  # exponent of the superquadric function (C^eta(x))
 goal_tol = 0.01 # goal tolerance
 while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
     obs_force = np.array([0,0])  # no obstacle external force
-    x, x_dot, x_ddot = dmp_traj.step(external_force=obs_force)  # execute the DMPs
+    x, x_dot, x_ddot = dmp_traj.step(external_force = obs_force)  # execute the DMPs
     x_list = np.vstack((x_list, x))
     x_dot_list = np.vstack((x_dot_list, x_dot))
     x_ddot_list = np.vstack((x_ddot_list, x_ddot))
@@ -110,7 +132,7 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 
 # Save the learnt trajectory for the next part
 obs_path_cbf = copy.deepcopy(x_list)
-obs_vel_cbf = copy.deepcopy(x_dot_list)
+obs_vel_cbf = copy.deepcopy(x_dot_list) 
 v_cbf = np.sqrt(obs_vel_cbf[:,0]**2+obs_vel_cbf[:,1]**2)  # velocity
 tVec_cbf = np.linspace(0,len(v_cbf)*time_step,len(v_cbf))  # time vector
 
@@ -119,19 +141,21 @@ plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'no cbf')
 plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'cbf')
+plt.plot(path_tau[:,0],path_tau[:,1],'g-',label = r'$\tau = 1.10$')
 # circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
 # plt.gca().add_patch(circle)
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
-plt.legend(loc = 'lower right')
+plt.legend(loc = 'upper right')
 
 plt.subplot(2,1,2)
 plt.plot(tVec_nocbf,v_nocbf,'r-',label = 'no cbf')
 plt.plot(tVec_cbf,v_cbf,'b-',label = 'cbf')
 plt.plot(tVec_nocbf,v_max*np.ones(len(v_nocbf)),'k--',label = r'$v_{max}$')
+plt.plot(tVec_tau,v_tau,'g-',label = r'$\tau = 1.10$')
 plt.xlabel('Time [s]')
 plt.ylabel(r'$h(x)$')
-plt.legend(loc = 'lower right')
+plt.legend(loc = 'upper right')
 #plt.show()
 
 # =============================================================================
