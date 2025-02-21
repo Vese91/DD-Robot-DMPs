@@ -10,6 +10,53 @@ from cbf import CBF
 from ddmr import DDMR
 import scipy.sparse as sparse
 
+
+
+
+def gen_dynamic_force(gamma, eta, v_ego, v_obs, p_obs, p_ego):
+    """
+    From the paper: "Duhé, J. F., Victor, S., & Melchior, P. (2021). Contributions on artificial potential field method for effective obstacle avoidance. Fractional Calculus and Applied Analysis, 24, 421-446.
+
+    a_max: maximum acceleration
+    eta: repulsive gain factor
+    v_ego: velocity of the ego vehicle
+    v_obs: velocity of the obstacle
+    p_obs: position of the obstacle
+    p_ego: position of the ego vehicle
+    """
+    v_rel = v_ego - v_obs
+    p_rel = p_ego - p_obs
+    rho_s = np.linalg.norm(p_rel)
+    v_ro = np.dot(v_rel, -p_rel) / rho_s
+    rho_m = v_ro**2 / (2 * gamma)
+    rho_delta = rho_s - rho_m
+    v_ro_orth = np.sqrt(np.linalg.norm(v_rel)**2 - v_ro**2)
+    nabla_p = - eta * (1 + v_ro/gamma) / (rho_delta**2)
+    nabla_v = eta * v_ro * v_ro_orth / (rho_delta**2) / (gamma * rho_s)
+    return np.array([- nabla_p, - nabla_v])
+
+
+def gen_potential(gamma, eta, v_ego, v_obs, p_obs, p_ego):
+    """
+    From the paper: "Duhé, J. F., Victor, S., & Melchior, P. (2021). Contributions on artificial potential field method for effective obstacle avoidance. Fractional Calculus and Applied Analysis, 24, 421-446.
+
+    a_max: maximum acceleration
+    eta: repulsive gain factor
+    v_ego: velocity of the ego vehicle
+    v_obs: velocity of the obstacle
+    p_obs: position of the obstacle
+    p_ego: position of the ego vehicle
+    """
+    v_rel = v_ego - v_obs
+    p_rel = p_ego - p_obs
+    rho_s = np.linalg.norm(p_rel)
+    v_ro = np.dot(v_rel, -p_rel) / rho_s
+    rho_m = v_ro**2 / (2 * gamma)
+    rho_delta = rho_s - rho_m
+    U = eta * (1/rho_delta - 1/r_min)
+    return -1/(1+U)
+
+
 # # =============================================================================
 # # CASE 1: DMP with h(x) = v_max - sqrt(dx^2 + dy^2) as CBF
 # # =============================================================================
@@ -226,6 +273,7 @@ import scipy.sparse as sparse
 # plt.ylabel(r'$h(x)$')
 # plt.legend(loc = 'lower right')
 
+<<<<<<< HEAD
 # # =============================================================================
 # # CASE 1: DMP with h(x) = v_max - sqrt(dx^2 + dy^2) as CBF
 # # =============================================================================
