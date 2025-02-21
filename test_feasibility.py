@@ -226,9 +226,9 @@ import scipy.sparse as sparse
 # plt.ylabel(r'$h(x)$')
 # plt.legend(loc = 'lower right')
 
-# =============================================================================
-# CASE 3: DMPs with obstacles as CBF
-# =============================================================================
+# # =============================================================================
+# # CASE 1: DMP with h(x) = v_max - sqrt(dx^2 + dy^2) as CBF
+# # =============================================================================
 
 # Reference trajectory (Cartesian coordinates)
 N = 1000  # discretization points
@@ -267,6 +267,28 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 # Save the learnt trajectory for the next part
 learnt_path = copy.deepcopy(x_list)
 learnt_vel = copy.deepcopy(x_dot_list)
+
+# DMPs execution (no CBF) tau = 1.1
+tau = 1.10  # temporal scaling factor
+dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
+dmp_traj.x_goal = np.array([-2.5, 0.0])  # new goal in cartesian coordinates
+dmp_traj.reset_state()  # reset the state of the DMPs
+x_list = np.array(dmp_traj.x) # x, y
+x_dot_list = np.array(dmp_traj.dx)  # v_x, v_y
+x_ddot_list = np.array(dmp_traj.ddx)  # a_x, a_y
+# Loop
+goal_tol = 0.01 # goal tolerance
+while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
+    x, x_dot, x_ddot = dmp_traj.step(tau = tau)  # execute the DMPs
+    x_list = np.vstack((x_list, x))
+    x_dot_list = np.vstack((x_dot_list, x_dot))
+    x_ddot_list = np.vstack((x_ddot_list, x_ddot))
+
+# Save the learnt trajectory for the next part
+path_tau = copy.deepcopy(x_list)
+vel_tau = copy.deepcopy(x_dot_list)
+v_tau = np.sqrt(vel_tau[:,0]**2+vel_tau[:,1]**2)/tau  # velocity
+tVec_tau = np.linspace(0,len(v_tau)*time_step,len(v_tau))  # time vector
 
 # OBSTACLE (NO CBF)
 dmp_traj.x_0 = np.array([3.0, 0.0])  # new start in cartesian coordinates
@@ -333,22 +355,57 @@ tVec_cbf = np.linspace(0,len(v_cbf)*time_step,len(v_cbf))  # time vector
 plt.figure(1, figsize=(8, 6), tight_layout=True)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
-plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'no cbf')
-plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'cbf')
-# circle = plt.Circle(obstacle_center, radius, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
-# plt.gca().add_patch(circle)
+plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'DMP')
+plt.plot(obs_path_cbf[:,0],obs_path_cbf[:,1],'b-',label = 'CMP')
+plt.plot(path_tau[:,0],path_tau[:,1],'g-',label = r'$\tau = 1.1$')
+plt.plot(obs_path_nocbf[-1,0],obs_path_nocbf[-1,1],'gx',label = 'Goal')
+plt.plot(obs_path_nocbf[0,0],obs_path_nocbf[0,1],'bo',label = 'Start')
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
-plt.legend(loc = 'lower right')
+plt.legend(loc = 'upper right')
+plt.grid(True)
+#plt.axis('equal')
+
 
 plt.subplot(2,1,2)
-plt.plot(tVec_nocbf,v_nocbf,'r-',label = 'no cbf')
-plt.plot(tVec_cbf,v_cbf,'b-',label = 'cbf')
+plt.plot(tVec_nocbf,v_nocbf,'r-',label = 'DMP')
+plt.plot(tVec_cbf,v_cbf,'b-',label = 'CMP')
 plt.plot(tVec_nocbf,v_max*np.ones(len(v_nocbf)),'k--',label = r'$v_{max}$')
+plt.plot(tVec_tau,v_tau,'g-',label = r'$\tau = 1.1$')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$h(x)$')
-plt.legend(loc = 'lower right')
-#plt.show()
+plt.ylabel(r'$h\,(x)$')
+plt.legend(loc = 'upper right')
+plt.grid(True)
+plt.show()
+
+# # Animation for RAL video
+# import matplotlib.animation as animation
+
+# tb_vmax = v_max / 12.5  # rescale v_max for turtlebot 3
+# tb_vcbf = v_cbf / 12.5  # rescale v_cbf for turtlebot 3
+# tVec_vmax = tVec_nocbf * 5.73  # time vector for v_max
+
+# fig, ax = plt.subplots(figsize=(16, 9))  # Set aspect ratio to 16:9
+# line, = ax.plot([], [], 'b-', label='CMP')
+# ax.plot(tVec_vmax, tb_vmax * np.ones(len(v_nocbf)), 'k--', label=r'$v_{max}$', linewidth=2)
+# ax.set_ylabel('$h(x)$ [m/s]', fontsize=18)
+# ax.set_xlabel('Time [s]', fontsize=18)
+# ax.legend(loc='upper right', fontsize=18)
+# plt.xlim([0, 3.16*5.73])
+# plt.ylim([0, 0.25])
+# ax.grid(True)
+
+# def init():
+#     line.set_data([], [])
+#     return line,
+
+# def update(frame):
+#     line.set_data(tVec_vmax[:frame], tb_vcbf[:frame])
+#     line.set_linewidth(3)  # Set the line width to 2
+#     return line,
+
+# ani = animation.FuncAnimation(fig, update, frames=len(tVec_cbf), init_func=init, blit=True, interval=20, repeat=False)
+# plt.show()
 
 # =============================================================================
 # CASE 2: DMPs and h(x) = mu_s*g - (dy*x-dx*y)^2/(x^2+y^2) as CBF
@@ -428,19 +485,53 @@ F_cbf = (path_cbf[:,0]*vel_cbf[:,1]-path_cbf[:,1]*vel_cbf[:,0])**2/((path_cbf[:,
 plt.figure(2, figsize=(8, 6), tight_layout=True)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
-plt.plot(path_nocbf[:,0],path_nocbf[:,1],'r-',label = 'no cbf')
-plt.plot(path_cbf[:,0],path_cbf[:,1],'b--',label = 'cbf')
+plt.plot(path_nocbf[:,0],path_nocbf[:,1],'r-',label = 'DMP')
+plt.plot(path_cbf[:,0],path_cbf[:,1],'b-',label = 'CMP')
+plt.plot(path_nocbf[-1,0],path_nocbf[-1,1],'gx',label = 'Goal')
+plt.plot(path_nocbf[0,0],path_nocbf[0,1],'bo',label = 'Start')
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
-plt.legend(loc = 'lower right')
+plt.legend(loc = 'upper right')
+plt.grid(True)
 
 plt.subplot(2,1,2)  
-plt.plot(tVec_nocbf,F_nocbf,'r-',label = 'no cbf')
-plt.plot(tVec_cbf,F_cbf,'b-',label = 'cbf')
+plt.plot(tVec_nocbf,F_nocbf,'r-',label = 'DMP')
+plt.plot(tVec_cbf,F_cbf,'b-',label = 'CMP')
 plt.plot(tVec_nocbf,a_max*np.ones(len(v_nocbf)),'k--',label = r'$a_{max}$')
 plt.xlabel('Time [s]')
-plt.ylabel(r'$h(x)$')
+plt.ylabel(r'$h\,(x)$')
 plt.legend(loc = 'lower right')
+plt.grid(True)
+plt.show()
+
+# Animation for RAL video
+# a_max = a_max / 12.5  # rescale a_max for turtlebot 3
+# F_cbf = F_cbf / 12.5  # rescale F_cbf for turtlebot 3
+# tVec_amax = tVec_cbf * 5.43  # time vector for v_max
+
+# import matplotlib.animation as animation
+
+# fig, ax = plt.subplots(figsize=(16, 9))  # Set aspect ratio to 16:9
+# line, = ax.plot([], [], 'b-', label='CMP')
+# ax.plot(tVec_amax, a_max * np.ones(len(v_nocbf)), 'k--', label=r'$a_{max}$')
+# ax.set_ylabel('$h(x)$ [m/s^2]',fontsize=18)
+# ax.set_xlabel('Time [s]',fontsize=18)
+# ax.legend(loc='upper right',fontsize=18)
+# plt.xlim([0, 3.16*5.43])
+# plt.ylim([0, 1.10])
+# ax.grid(True)
+
+# def init():
+#     line.set_data([], [])
+#     return line,
+
+# def update(frame):
+#     line.set_data(tVec_amax[:frame], F_cbf[:frame])
+#     return line,
+
+# ani = animation.FuncAnimation(fig, update, frames=len(tVec_amax), init_func=init, blit=True, interval=20, repeat=False)
+# plt.show()
+
 
 # =============================================================================
 # CASE 3: DMPs with obstacles as CBF
@@ -548,9 +639,9 @@ plt.figure(3, figsize=(8, 6), tight_layout=True)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(1,1,1)
 # plt.plot(learnt_path[:,0],learnt_path[:,1],'b--',label = 'learnt path')
-plt.plot(path_cbf[:,0],path_cbf[:,1],'b-',label = 'CBF')
+plt.plot(path_cbf[:,0],path_cbf[:,1],'b-',label = 'CMP')
 for obstacle_center in obstacle_centers:
-    plt.plot(obstacle_center[0],obstacle_center[1],'yo')
+    plt.plot(obstacle_center[0],obstacle_center[1],'ro',linewidth = 0.5)
 # plt.plot(obstacle_centers[0][0],obstacle_centers[0][1],'yo',label = 'obstacle')
 # draw circle for obstacle, with radius r_min
 # circle = plt.Circle(obstacle_center, r_min, color='darkgreen', fill=False, linestyle='-', label='obstacle', linewidth = 2)
@@ -607,13 +698,13 @@ while not np.linalg.norm(dmp_traj.x - dmp_traj.x_goal) < goal_tol:
 
 # plt.subplot(2,1,2)
 # plt.plot(learnt_path[:,0],learnt_path[:,1],'b--',label = 'learnt path')
-plt.plot(x_list[:,0],x_list[:,1],'r-',label = 'no CBF')
+plt.plot(x_list[:,0],x_list[:,1],'r-',label = 'DMP')
 # plt.plot(obstacle_center[0],obstacle_center[1],'ro',label = 'obstacle')
 plt.plot(dmp_traj.x_goal[0],dmp_traj.x_goal[1],'gx',label = 'goal')
 plt.plot(dmp_traj.x_0[0],dmp_traj.x_0[1],'bo',label = 'start')
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
-plt.legend(loc = 'lower right')
+plt.legend(loc = 'upper right')
 # plt.axis('equal')
 plt.grid(True)
 
@@ -621,8 +712,8 @@ plt.grid(True)
 # tVec_nocbf = np.linspace(0,len(x_list),len(x_list)-1)*time_step  # time vector
 # tVec_cbf = np.linspace(0,len(path_cbf),len(path_cbf)-1)*time_step  # time vector
 
-# plt.plot(tVec_nocbf,potentials,'r-',label = 'no CBF')
-# plt.plot(tVec_cbf,potentials_cbf,'b-',label = 'CBF')
+# plt.plot(tVec_nocbf,potentials,'r-',label = 'DMP')
+# plt.plot(tVec_cbf,potentials_cbf,'b-',label = 'CMP')
 # plt.axhline(y=delta_0, color='k', linestyle='--', label = r'$\delta_0$')
 # plt.xlabel('Time [s]')
 # plt.ylabel(r'$h(x)$')
