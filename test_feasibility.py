@@ -376,7 +376,7 @@ plt.xlabel('Time [s]')
 plt.ylabel(r'$h\,(x)$')
 plt.legend(loc = 'upper right')
 plt.grid(True)
-plt.show()
+#plt.show()
 
 # # Animation for RAL video
 # import matplotlib.animation as animation
@@ -502,7 +502,7 @@ plt.xlabel('Time [s]')
 plt.ylabel(r'$h\,(x)$')
 plt.legend(loc = 'lower right')
 plt.grid(True)
-plt.show()
+#plt.show()
 
 # Animation for RAL video
 # a_max = a_max / 12.5  # rescale a_max for turtlebot 3
