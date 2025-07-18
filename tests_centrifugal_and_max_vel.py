@@ -175,6 +175,7 @@ v_cbf = np.sqrt(obs_vel_cbf[:,0]**2+obs_vel_cbf[:,1]**2)  # velocity
 tVec_cbf = np.linspace(0,len(v_cbf)*time_step,len(v_cbf))  # time vector
 
 plt.figure(1, figsize=(8, 6), tight_layout=True)
+plt.title("Constraint on maximum velocity", fontsize=16)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(obs_path_nocbf[:,0],obs_path_nocbf[:,1],'r-',label = 'DMP')
@@ -272,7 +273,8 @@ vel_cbf = copy.deepcopy(x_dot_list)
 tVec_cbf = np.linspace(0,len(path_nocbf)*time_step,len(path_nocbf))  # time vector
 F_cbf = (path_cbf[:,0]*vel_cbf[:,1]-path_cbf[:,1]*vel_cbf[:,0])**2/((path_cbf[:,0]**2+path_cbf[:,1]**2)**(3/2))
 
-plt.figure(3, figsize=(8, 6), tight_layout=True)
+plt.figure(figsize=(8, 6), tight_layout=True)
+plt.title("Constraint on centrifugal acceleration", fontsize=16)
 plt.subplots_adjust(hspace=0.3)  # Adjust the space between the subplots
 plt.subplot(2,1,1)
 plt.plot(path_nocbf[:,0],path_nocbf[:,1],'r-',label = 'DMP')
@@ -293,5 +295,3 @@ plt.ylabel(r'$a\,(t)$', fontsize = 14)
 plt.legend(loc = 'lower right')
 plt.grid(True)
 plt.show()
-
-print('>>  End of the first part of the code')

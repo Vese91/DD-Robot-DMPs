@@ -188,7 +188,7 @@ x_list_10 = np.array(dmp_traj.x) # x, y
 x_dot_list_10 = np.array(dmp_traj.dx)  # v_x, v_y
 x_ddot_list_10 = np.array(dmp_traj.ddx)  # a_x, a_y
 
-plt.figure(4, figsize=(8, 6), tight_layout=True)
+plt.figure(figsize=(8, 6), tight_layout=True)
 # Main plot
 plt.plot(x_list[:, 0], x_list[:, 1], label='DMP')
 plt.plot(path_cbf[:, 0], path_cbf[:, 1], label=r'CMP, $\alpha = 50$')
