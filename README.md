@@ -6,8 +6,7 @@ Code for replicating the experiments of the paper (please cite):
   author={Vesentini, Federico and Meli, Daniele and Sansonetto, Nicola and Di Persio, Luca and Muradore, Riccardo},
   journal={IEEE Robotics and Automation Letters},
   year={2025},
-  publisher={IEEE},
-  note={In publication}
+  publisher={IEEE}
 }
 ```
 
