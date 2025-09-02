@@ -13,7 +13,7 @@ Code for replicating the experiments of the paper (please cite):
 
 ## Requirements
 - Python 3.11 tested
-- Clone and install the original DMP repo from https://gitlab.com/altairLab/new_pydmps.git
+- Clone and install the original DMP repo from https://github.com/mginesi/dmp_vol_obst.git
 
 ## Run
 - Plot generation for obstacle avoidance with moving obstacles
